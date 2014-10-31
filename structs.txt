@@ -1,0 +1,51 @@
+StreetCRUD
+[Server] localhost
+[User]   dan
+[Password]   secret  
+[Database] DBName
+[ssl] true
+[Underscore] true
+[package]models
+
+
+[Add struct]
+[table] Tbl_Name
+[File name] XUsers
+type User struct {
+	LoginID  int    `json:"loginid"` [primary]
+	Name     string `json:"name, omitempty"` [index] [patch] [size:255]
+	Email    string `json:"email"` [deletedOn]
+	Password string `json:"password" out:"false"`
+	Deleted bool `json:”deleted”` [deleted]
+	DelOn	time.Time     `json:”deletedon”` [deletedOn][nulls]
+}
+
+[add struct]
+[table]
+[File name] XUsers
+type Blog struct {
+	BlogID     int    `json:”blogid"` [primary]
+	Title      string `json:”title, omitempty"` [index][patch][size:255]
+	Body       string `json:”body”` [nulls]
+	CategoryID int    `json:”catID”`
+	Object     T	  [Ignore]
+	Deleted    bool   `json:”deleted”` [deleted]
+	DelOn	   time.Time   `json:”deletedon”` [deletedOn][nulls]
+
+}
+
+
+[alter table] User
+LoginID [to] LogID
+Name [to] UserName
+Email [to] Email
+[add Struct]
+[table] tbl_new_name
+[File name] x9.Go
+type UserNew struct {
+	LogID  int `json:"loginid"`	 	[primary]
+	UserName string `json:”userName”` [index][patch] [size:255]
+	Phone string `json:”phone”` [nulls]
+	Email float32 `json:”email”` [nulls]
+	Password string `json:"password" out:"false"`
+}
