@@ -306,10 +306,25 @@ func main() {
 	//	CheckForTables(db)
 	//}
 
-	fmt.Printf("\n")
-	fmt.Printf("***StreetCRUD by Daniel Isted***\n")
+	fmt.Println("")
+	fmt.Println("  __  ___  __   ___  ___ ___     __   __        __  ")
+	fmt.Println(" /__`  |  |__) |__  |__   |     /  ` |__) |  | |  \\ ")
+	fmt.Println(" .__/  |  |  \\ |___ |___  |     \\__, |  \\ \\__/ |__/ ")
+	fmt.Println("")
+	//fmt.Println("")
+	//fmt.Println("")
+	fmt.Println("                       __      ")
+	fmt.Println("                      |__) \\ / ")
+	fmt.Println("                      |__)  |  ")
+	fmt.Println("")
+	fmt.Println("  __               ___            __  ___  ___  __  ")
+	fmt.Println(" |  \\  /\\  |\\ | | |__  |       | /__`  |  |__  |  \\ ")
+	fmt.Println(" |__/ /~~\\ | \\| | |___ |___    | .__/  |  |___ |__/ ")
+	fmt.Println("")
+	fmt.Println("")
 	fmt.Printf("Show first run instructions here:\n")
 	fmt.Printf("Press return to quit.\n")
+	//fmt.Println("")
 	//uiLoop:
 	for {
 		fmt.Printf("\nEnter file path for StreetCRUD struct file: ")
@@ -650,7 +665,8 @@ func main() {
 											col.deleted = true
 											wasTypeAssigned = true
 										case userOptions == "deletedon]":
-											if strings.ToLower(col.goType) != "time.time" {
+											fmt.Println(col.goType)
+											if strings.ToLower(col.goType) == "time.time" {
 												col.dbType = "timestamp without time zone"
 											} else {
 												fmt.Println(processFail + "A column marked as [deletedOn] must have the type time.Time.")

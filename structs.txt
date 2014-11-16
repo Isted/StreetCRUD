@@ -7,17 +7,16 @@ StreetCRUD
 [Underscore] true
 [package]models
 
-
 [Add struct]
 [table] Tbl_Name
 [File name] XUsers
 type User struct {
 	LoginID  int    `json:"loginid"` [primary]
 	Name     string `json:"name, omitempty"` [index] [patch] [size:255]
-	Email    string `json:"email"` [deletedOn]
+	Email    string `json:"email"`
 	Password string `json:"password" out:"false"`
 	Deleted bool `json:”deleted”` [deleted]
-	DelOn	time.Time     `json:”deletedon”` [deletedOn][nulls]
+	DelOn	   time.Time   `json:”deletedon”` [deletedOn][nulls]
 }
 
 [add struct]
@@ -30,20 +29,21 @@ type Blog struct {
 	CategoryID int    `json:”catID”`
 	Object     T	  [Ignore]
 	Deleted    bool   `json:”deleted”` [deleted]
-	DelOn	   time.Time   `json:”deletedon”` [deletedOn][nulls]
+	DeletedOn	   time.Time   `json:”deletedon”` [deletedOn][nulls]
 
 }
 
 
 [alter table] User
-LoginID [to] LogID
-Name [to] UserName
-Email [to] Email
+[copy cols]
+login_id [to] LogID
+name [to] UserName
+email [to] Email
 [add Struct]
 [table] tbl_new_name
 [File name] x9.Go
 type UserNew struct {
-	LogID  int `json:"loginid"`	 	[primary]
+	LogID int `json:"loginid"`	 	[primary]
 	UserName string `json:”userName”` [index][patch] [size:255]
 	Phone string `json:”phone”` [nulls]
 	Email float32 `json:”email”` [nulls]
