@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
 	"unicode"
 	"unicode/utf8"
+
+	_ "github.com/lib/pq"
 	//"./filePro"
 	"bufio"
 	//"github.com/isted/StreetCRUD"
@@ -29,6 +30,7 @@ type structToCreate struct {
 	fileName   string
 	hasKey     bool
 	deletedCol string
+	nullsPkg   bool
 }
 
 type column struct {
@@ -40,7 +42,7 @@ type column struct {
 	primary    bool
 	index      bool
 	patch      bool
-	size       string // "" if not varchar
+	size       string // "" if not varchar w/ size
 	deleted    bool
 	deletedOn  bool
 	nulls      bool
@@ -98,6 +100,34 @@ func (col *column) MapGoTypeToDBTypes() (bool, string) {
 		return false, "A non-supported data type (" + col.goType + ") was provided. The [ignore] option can be added to the end of a struct variable allowing it to be ignored for code generation."
 	}
 	return true, ""
+}
+
+func (col *column) MapNullTypes() error {
+	switch strings.ToLower(col.goType) {
+	case "int":
+		col.goType = "nulls.NullInt"
+	case "int32":
+		col.goType = "nulls.NullInt32"
+	case "int64":
+		col.goType = "nulls.NullInt64"
+	case "uint32":
+		col.dbType = "nulls.NullUInt32"
+	case "float32":
+		col.goType = "nulls.NullFloat32"
+	case "float64":
+		col.goType = "nulls.NullFloat64"
+	case "bool":
+		col.goType = "nulls.NullBool"
+	case "time.time":
+		col.goType = "nulls.NullTime"
+	case "string":
+		col.goType = "nulls.NullString"
+	case "[]byte":
+		col.goType = "nulls.NullByteSlice"
+	default:
+		return fmt.Errorf("A non-supported data type (" + col.goType + ") was provided as a nullable column. Types must be int64, uint32, int32, int, float64, float32,  string, bool, time.Time, or []byte.")
+	}
+	return nil
 }
 
 func CheckColAndTblNames(name string) error {
@@ -305,8 +335,8 @@ func main() {
 	//if err == nil {
 	//	CheckForTables(db)
 	//}
-
 	fmt.Println("")
+	fmt.Println("////////////////////////////////////////////////////")
 	fmt.Println("  __  ___  __   ___  ___ ___     __   __        __  ")
 	fmt.Println(" /__`  |  |__) |__  |__   |     /  ` |__) |  | |  \\ ")
 	fmt.Println(" .__/  |  |  \\ |___ |___  |     \\__, |  \\ \\__/ |__/ ")
@@ -321,6 +351,7 @@ func main() {
 	fmt.Println(" |  \\  /\\  |\\ | | |__  |       | /__`  |  |__  |  \\ ")
 	fmt.Println(" |__/ /~~\\ | \\| | |___ |___    | .__/  |  |___ |__/ ")
 	fmt.Println("")
+	fmt.Println("////////////////////////////////////////////////////")
 	fmt.Println("")
 	fmt.Printf("Show first run instructions here:\n")
 	fmt.Printf("Press return to quit.\n")
@@ -615,13 +646,12 @@ func main() {
 									}
 
 									col.goType = lineColumn[1]
-
 									//Handle meta data contained w/in ` `
 									strucOptsColumn := strings.Split(sLine, "`")
 									if len(strucOptsColumn) > 1 {
-										col.structLine = lineColumn[0] + " " + lineColumn[1] + " `" + strucOptsColumn[1] + "`"
+										col.structLine = lineColumn[0] + " " + col.goType + " `" + strucOptsColumn[1] + "`"
 									} else {
-										col.structLine = lineColumn[0] + " " + lineColumn[1]
+										col.structLine = lineColumn[0] + " " + col.goType
 									}
 
 									//Handle column options
@@ -680,6 +710,7 @@ func main() {
 											continue LineParsed
 										case userOptions == "nulls]":
 											col.nulls = true
+											structFromFile.nullsPkg = true
 										}
 
 									} //for i < len(scOptsColumn)
@@ -691,6 +722,22 @@ func main() {
 											return
 										}
 									}
+
+									if col.nulls {
+										if err := col.MapNullTypes(); err != nil {
+											fmt.Println(processFail + err.Error())
+											return
+										}
+										fmt.Printf("Nulls No Err: %s", col.goType)
+										//Handle meta data contained w/in ` `
+										strucOptsColumn := strings.Split(sLine, "`")
+										if len(strucOptsColumn) > 1 {
+											col.structLine = lineColumn[0] + " " + col.goType + " `" + strucOptsColumn[1] + "`"
+										} else {
+											col.structLine = lineColumn[0] + " " + col.goType
+										}
+									}
+
 									//add the built struct to the slice of structs to use for code gen
 									structFromFile.cols = append(structFromFile.cols, col)
 
@@ -718,8 +765,11 @@ func main() {
 										return
 									}
 								} else {
-									fmt.Println(processFail + "[to] was missing from OldColumnName [to] NewStructVar.")
-									return
+									if errorCheck != "[copy cols]" {
+										fmt.Println(processFail + "[to] was missing from OldColumnName [to] NewStructVar.")
+										return
+									}
+									continue LineParsed
 								}
 								//The line appears to be formatted properly
 								structFromFile.oldAltCols = append(structFromFile.oldAltCols, strings.TrimSpace(lineMap[0]))
@@ -834,7 +884,11 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		buffer.WriteString(packageName)
 		buffer.WriteString("\n\n")
 		buffer.WriteString("import (\n")
-		buffer.WriteString("\"database/sql\"\n\"fmt\"\n_ \"github.com/lib/pq\"\n\"encoding/json\"")
+		buffer.WriteString("\"database/sql\"\n_ \"github.com/lib/pq\"\n\"encoding/json\"\n\"log\"")
+		buffer.WriteString("\n\"time\"")
+		if structFromFile.nullsPkg {
+			buffer.WriteString("\n\"github.com/markbates/going/nulls\"")
+		}
 		buffer.WriteString("\n)\n")
 	}
 
@@ -847,7 +901,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		}
 	}
 
-	buffer.WriteString("type ")
+	buffer.WriteString("\ntype ")
 	buffer.WriteString(structFromFile.structName)
 	buffer.WriteString(" struct {\n")
 	for _, col := range structFromFile.cols {
