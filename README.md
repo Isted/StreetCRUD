@@ -22,7 +22,8 @@ StreetCRUD
 [Server] localhost
 [User]   dan
 [Password]   secret  
-[Database] DBName
+[Database] db_name
+[schema] public
 [ssl] true
 [Underscore] true
 [package]models
@@ -77,6 +78,7 @@ The Following keywords need to appear at the top of the user created text file b
 - **[User]**:User name used to login to the database (needs to have table creation rights)
 - **[Password]**: Password for above User
 - **[Database]**: Name of the database where the tables need to be created (must already exist)
+- **[Schema]**: The name of the schema where the table should be created. PostgreSQL uses public by default.
 - **[SSL]**: A value of true or false will indicate if the connection uses ssl.
 - **[Underscore]**: A value of true or false will indicate whether table and column names will be formatted with underscores. Since postgres doesn't support camel cased names without quotes, all table and column names will be converted to lower case whether or not underscores are used.
 - **[Package]**: Name of the package for the generated code. If more than one package is required, two seperate files will need to be processed by Street CRUD.
