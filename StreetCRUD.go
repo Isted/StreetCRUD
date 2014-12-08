@@ -2,27 +2,28 @@ package main //StreetCRUD by Daniel Isted (c) 2014
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
+	"log"
 	"unicode"
 	"unicode/utf8"
 
+	"database/sql"
 	_ "github.com/lib/pq"
 	//"./filePro"
 	"bufio"
 	//"github.com/isted/StreetCRUD"
-	"log"
+
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type structToCreate struct {
 	cols       []*column
 	oldAltCols []string
 	newAltCols []string
+	oldColPrim string
 	actionType string
 	structName string
 	tableName  string
@@ -48,14 +49,6 @@ type column struct {
 	deleted    bool
 	deletedOn  bool
 	nulls      bool
-}
-
-func (str *structToCreate) SetDefaultTblName(structName string, useUnderscore bool) {
-	if useUnderscore {
-		str.tableName = "tbl_" + strings.ToLower(structName)
-	} else {
-		str.tableName = "tbl" + strings.ToLower(structName)
-	}
 }
 
 func (struc *structToCreate) CheckStructForDeletes() bool {
@@ -275,52 +268,6 @@ func readFileMakeSlice(filePath string) ([]string, error) {
 	return fileLines, nil
 }
 
-func CheckForTables(db *sql.DB) {
-	//Have to group structs that will go into the same file
-
-	var strSearchTerm string = "x9"
-	var rows *sql.Rows
-	var err error
-	if strSearchTerm == "x9" {
-		rows, err = db.Query("Select practice_id, prac_time from tbl_practice")
-	} else {
-		rows, err = db.Query("Select loginid, name, email, password from login Where email like $1", "a@a.com")
-	}
-
-	if err != nil {
-		fmt.Println("Db Error: " + err.Error())
-		return
-	}
-
-	//defer rows.Close()
-
-	defer func() {
-		log.Println("CheckForTables(): Rows Closed")
-		fmt.Println("Rows Closed")
-		rows.Close()
-	}()
-
-	var practiceID int
-	var pracTime time.Time
-	for rows.Next() {
-		err = rows.Scan(&practiceID, &pracTime)
-		if err != nil {
-			fmt.Println("Db Error: " + err.Error())
-			return
-		}
-		fmt.Printf("\nID: %d\n", practiceID)
-		fmt.Println(pracTime)
-	}
-
-	//createTable := "Create Table IF NOT EXISTS tbl_practice_code ( practice_id integer NOT NULL, practice_s character varying, CONSTRAINT pk_practice_code PRIMARY KEY (practice_id) ) WITH (OIDS=FALSE); ALTER TABLE tbl_practice_code OWNER TO postgres; GRANT ALL ON TABLE tbl_practice_code TO vikiblogall;"
-	createTable := "Alter Table IF EXISTS tbl_practice_code Rename To prac_code1;"
-	_, errCreateTbl := db.Exec(createTable)
-	if errCreateTbl != nil {
-		fmt.Println("Db Error: " + errCreateTbl.Error())
-		return
-	}
-}
-
 func GetSafePathForSave(filePath string) string {
 	_, err := os.Stat(filePath)
 	if os.IsNotExist(err) {
@@ -374,8 +321,6 @@ func main() {
 	fmt.Println(" /__`  |  |__) |__  |__   |     /  ` |__) |  | |  \\ ")
 	fmt.Println(" .__/  |  |  \\ |___ |___  |     \\__, |  \\ \\__/ |__/ ")
 	fmt.Println("")
-	//fmt.Println("")
-	//fmt.Println("")
 	fmt.Println("                       __      ")
 	fmt.Println("                      |__) \\ / ")
 	fmt.Println("                      |__)  |  ")
@@ -386,9 +331,8 @@ func main() {
 	fmt.Println("")
 	fmt.Println("////////////////////////////////////////////////////")
 	fmt.Println("")
-	fmt.Printf("Show first run instructions here:\n")
+	fmt.Printf("Please see github.com/isted/StreetCRUD for instructions:\n")
 	fmt.Printf("Press return to quit.\n")
-	//fmt.Println("")
 	//uiLoop:
 	for {
 		fmt.Printf("\nEnter file path for StreetCRUD struct file: ")
@@ -641,9 +585,9 @@ func main() {
 								}
 								if useUnderscore {
 									tblName, err = ConvertToUnderscore(structFromFile.structName)
-									structFromFile.SetDefaultTblName(tblName, useUnderscore)
+									structFromFile.tableName = tblName
 								} else {
-									structFromFile.SetDefaultTblName(structFromFile.structName, useUnderscore)
+									structFromFile.tableName = strings.ToLower(structFromFile.structName)
 								}
 
 							} else {
@@ -723,19 +667,29 @@ func main() {
 										wasTypeAssigned = false
 										switch {
 										case userOptions == "primary]":
-											switch strings.ToLower(col.goType) {
-											case "int", "int8", "int16", "int32", "uint", "uint8", "uint16", "uint32", "uintptr":
-												col.dbType = "integer"
-											case "int64", "uint64":
-												col.dbType = "bigint"
-											default:
-												fmt.Println(processFail + "Not a known primary key type. StreetCRUD only supports auto incrementing integers at this point.")
+											if !structFromFile.hasKey {
+												switch strings.ToLower(col.goType) {
+												case "int", "int8", "int16", "int32", "uint", "uint8", "uint16", "uint32", "uintptr":
+													col.dbType = "integer"
+												case "int64", "uint64":
+													col.dbType = "bigint"
+												default:
+													fmt.Println(processFail + "Not a known primary key type. StreetCRUD only supports auto incrementing integers at this point.")
+													return
+												}
+												col.primary = true
+												wasTypeAssigned = true
+												structFromFile.hasKey = true
+												//Find and store the primary key column from the old table
+												for i, newCol := range structFromFile.newAltCols {
+													if newCol == col.colName {
+														structFromFile.oldColPrim = structFromFile.oldAltCols[i]
+													}
+												}
+											} else {
+												fmt.Println(processFail + "The [primary] keyword can only be used on one column per struct definition.")
 												return
 											}
-											col.primary = true
-											wasTypeAssigned = true
-											structFromFile.hasKey = true
-
 										case strings.Contains(userOptions, "size:"):
 											if col.goType != "string" {
 												fmt.Println(processFail + "[size] can only be used with type string.")
@@ -871,6 +825,8 @@ func main() {
 			pathChanged := make(map[string]string)
 			connString := BuildConnString(dbUser, password, dbName, server, useSSL)
 			//"/Users/disted/go/src/github.com/isted/StreetCRUD/testing.txt"
+			dbConnected := false
+			var db *sql.DB
 			for i, structObj := range structsToAdd {
 				if pathChanged[structObj.fileName] == "" {
 					//New path, check to make sure it doesn't already exist
@@ -884,8 +840,6 @@ func main() {
 						fmt.Println("There was a problem generating a new go file. " + err.Error())
 						return
 					}
-					//TODO: Doesn't seem to be working, so maybe write a for loop that explicitly closes the files
-					//defer fileOpen[structObj.fileName].Close()
 
 					//BuildStringForFileWrite(structObj, true, packageName)
 					fileOpen[pathChanged[structObj.fileName]].WriteString(BuildStringForFileWrite(structObj, true, packageName, connString))
@@ -903,19 +857,41 @@ func main() {
 				for _, c := range structObj.cols {
 					fmt.Println("Cols: " + c.colName)
 				}
-			}
 
+				//Check to see if user wants to generate or alter tables
+				var yesOrNo string
+				fmt.Printf("\nDo you want to create/alter %s (y or n): ", structObj.tableName)
+				_, err := fmt.Scanf("%s", &yesOrNo)
+				if err != nil {
+					fmt.Println("An error occurred, exiting Street CRUD.\n")
+					return
+				}
+				if strings.ToLower(yesOrNo) == "y" || strings.ToLower(yesOrNo) == "yes" {
+					if dbConnected == false {
+						dbConnected = true
+						var err error
+						db, err = sql.Open("postgres", connString)
+						if err != nil {
+							fmt.Printf("There was a problem opening the database: %s", err.Error())
+							return
+						}
+						if err := db.Ping(); err != nil {
+							fmt.Printf("DB connection issue: %s", err.Error())
+							return
+						}
+					}
+					CreateOrAlterTables(structObj, db)
+				}
+
+			} //end range structsToAdd
+			if dbConnected {
+				db.Close()
+			}
 			//Close files manually since the defer.Close() doesn't get called until the program exits
 			for _, value := range fileOpen {
-				//fmt.Println("Key:", key, "Value:", value)
 				value.Close()
 				fmt.Println("Closed")
 			}
-
-			//defer func() {
-			//	log.Println("CheckForTables(): Rows Closed")
-			//	defer value.Close()
-			//}()
 
 		}
 
@@ -964,7 +940,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	}
 
 	//Write global variable if generated code will be using prepared stmts
-	var dataLayerVar string = strings.ToLower(structFromFile.structName) + "SQL"
+	var dataLayerVar string = LowerCaseFirstChar(structFromFile.structName) + "SQL"
 	if structFromFile.prepared {
 		buffer.WriteString("\n//Global Data Layer\n")
 		buffer.WriteString(fmt.Sprintf("var %s %sDataLayer\n", dataLayerVar, structFromFile.structName))
@@ -1050,9 +1026,9 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	//Create DataLayer section if prepared statements are being used
 	if structFromFile.prepared {
 		buffer.WriteString(fmt.Sprintf("\ntype %sDataLayer struct {\n", structFromFile.structName))
-		buffer.WriteString("DB *sql.DB\nGetByID *sql.Stmt\nUpdate *sql.Stmt\nInsert *sql.Stmt\nDelete *sql.Stmt")
+		buffer.WriteString("DB *sql.DB\nGetByID *sql.Stmt\nUpdate *sql.Stmt\nInsert *sql.Stmt\nDelete *sql.Stmt\n")
 		if delColName != "" {
-			buffer.WriteString("\nMarkDel *sql.Stmt\n")
+			buffer.WriteString("MarkDel *sql.Stmt\n")
 		}
 		for _, methodSlc := range indexMethods {
 			buffer.WriteString(fmt.Sprintf("%s *sql.Stmt\n", methodSlc[4]))
@@ -1214,11 +1190,257 @@ func BuildConnString(dbUser string, password string, dbName string, server strin
 	buffer.WriteString("/")
 	buffer.WriteString(dbName)
 	buffer.WriteString("?sslmode=")
-	if useSSL {
+	if !useSSL {
 		buffer.WriteString("disable")
 	} else {
 		buffer.WriteString("enable")
 	}
 
 	return buffer.String()
+}
+
+//CreateOrAlterTables creates and alters tables based on the struct definition file
+func CreateOrAlterTables(structObj *structToCreate, db *sql.DB) {
+	var tablePathName string = fmt.Sprintf("%s.%s.%s", AddQuotesIfAnyUpperCase(structObj.database), AddQuotesIfAnyUpperCase(structObj.schema), structObj.tableName)
+	var oldTableName string
+	var row *sql.Row
+	var err error
+	var indexes []string
+	var indexNames []string
+	var primCol string
+
+	//find values for needed variables
+	for _, col := range structObj.cols {
+		if col.primary {
+			primCol = col.colName
+		}
+		if col.index {
+			indexNames = append(indexNames, fmt.Sprintf("ix_%s_%s", structObj.tableName, col.colName))
+			indexes = append(indexes, fmt.Sprintf("CREATE INDEX ix_%s_%s ON %s USING btree (%s);", structObj.tableName, col.colName, tablePathName, col.colName))
+		}
+	}
+
+	//Check if a table exists when [alter table] is in the input file
+	checkTable := "SELECT EXISTS(SELECT * FROM information_schema.tables WHERE table_name =  $1 and table_schema = $2)"
+	if len(structObj.newAltCols) > 0 {
+		//copy data from oldAltCols to newAltCols
+		var exists bool
+		row = db.QueryRow(checkTable, structObj.actionType, structObj.schema)
+		err = row.Scan(&exists)
+		if err != nil {
+			log.Println("An error occurred checking for the table's existence :" + err.Error())
+			return
+		}
+		if !exists {
+			fmt.Println(fmt.Sprintf("The table %s to be altered doesn't exist in the database. Please make sure the table name matches the name in your Street CRUD file.", structObj.actionType))
+			return
+		}
+	}
+
+	loop := true
+	renameTable := structObj.tableName
+	//rename old table if needed, store new name if copying of data is needed
+	for i := 1; loop; i++ {
+		row = db.QueryRow(checkTable, renameTable, structObj.schema)
+		err = row.Scan(&loop)
+		if err != nil {
+			log.Println("An error occurred checking for the table's existence :" + err.Error())
+			return
+		}
+		if loop {
+			//name exists, store name and check again
+			renameTable = structObj.tableName + strconv.Itoa(i)
+		}
+	}
+	//rename old table if it exists
+	if renameTable != structObj.tableName {
+		alterTable := "ALTER TABLE IF EXISTS %s RENAME TO %s;"
+		fmt.Println(fmt.Sprintf(alterTable, tablePathName, fmt.Sprintf("%s.%s", AddQuotesIfAnyUpperCase(structObj.schema), renameTable)))
+		_, err = db.Exec(fmt.Sprintf(alterTable, tablePathName, fmt.Sprintf("%s", renameTable)))
+		if err != nil {
+			log.Println("There was an issue changing the existing table's name: " + err.Error())
+			return
+		}
+	}
+
+	//Determine the table name for copying from
+	if structObj.actionType != "Add" {
+		if structObj.tableName == structObj.actionType {
+			//use rename
+			oldTableName = fmt.Sprintf("%s.%s.%s", AddQuotesIfAnyUpperCase(structObj.database), AddQuotesIfAnyUpperCase(structObj.schema), renameTable)
+		} else {
+			//structObj.actionType
+			oldTableName = fmt.Sprintf("%s.%s.%s", AddQuotesIfAnyUpperCase(structObj.database), AddQuotesIfAnyUpperCase(structObj.schema), structObj.actionType)
+		}
+	}
+
+	//Check and rename old primary key constraint if needed
+	pgClassStmt := "SELECT EXISTS(SELECT relname FROM pg_class WHERE relname = $1)"
+	loop = true
+	pkConstraint := fmt.Sprintf("pk_%s_%s", structObj.tableName, primCol)
+	pkRename := pkConstraint
+	for i := 1; loop; i++ {
+		row = db.QueryRow(pgClassStmt, pkRename)
+		err = row.Scan(&loop)
+		if err != nil {
+			log.Println("An error occurred checking for the primary key constraint's name:" + err.Error())
+			return
+		}
+		if loop {
+			//name exists, store name and check again
+			pkRename = pkConstraint + strconv.Itoa(i)
+		}
+	}
+	//rename old pk if it exists
+	if pkConstraint != pkRename {
+		_, err = db.Exec(fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", pkConstraint, pkRename))
+		if err != nil {
+			log.Println("There was an issue changing the existing pk constraint's name: " + err.Error())
+			return
+		}
+	}
+
+	//Check if sequence exists, then rename it if needed
+	loop = true
+	seqName := fmt.Sprintf("%s_%s_seq", structObj.tableName, primCol)
+	seqRename := seqName
+	for i := 1; loop; i++ {
+		row = db.QueryRow(pgClassStmt, seqRename)
+		err = row.Scan(&loop)
+		if err != nil {
+			log.Println("An error occurred checking for the sequences' name:" + err.Error())
+			return
+		}
+		if loop {
+			seqRename = seqName + strconv.Itoa(i)
+		}
+	}
+	//rename old seq if it exists
+	if seqName != seqRename {
+		_, err = db.Exec(fmt.Sprintf("ALTER SEQUENCE %s RENAME TO %s;", seqName, seqRename))
+		if err != nil {
+			log.Println("There was an issue changing the existing sequences' name: " + err.Error())
+			return
+		}
+	}
+	seqName = fmt.Sprintf("%s.%s", AddQuotesIfAnyUpperCase(structObj.schema), seqName)
+
+	//Check if indexes exist, then rename if needed
+	var indexRename string
+	for _, index := range indexNames {
+		indexRename = index
+		loop = true
+		for i := 1; loop; i++ {
+			row = db.QueryRow(pgClassStmt, indexRename)
+			err = row.Scan(&loop)
+			if err != nil {
+				log.Println("An error occurred checking for an indexes' name:" + err.Error())
+				return
+			}
+			if loop {
+				indexRename = index + strconv.Itoa(i)
+			}
+		}
+		if index != indexRename {
+			_, err = db.Exec(fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", index, indexRename))
+			if err != nil {
+				log.Println("There was an issue changing the existing indexes' name: " + err.Error())
+				return
+			}
+		}
+	}
+
+	//Create new table
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (", tablePathName))
+	for i, col := range structObj.cols {
+		buffer.WriteString(fmt.Sprintf("%s %s ", col.colName, col.dbType))
+		if !col.nulls || col.primary {
+			buffer.WriteString("NOT NULL")
+		}
+		if i < len(structObj.cols)-1 {
+			buffer.WriteString(", ")
+		}
+	}
+	buffer.WriteString(" ) WITH (OIDS=FALSE);")
+	fmt.Println(buffer.String())
+	_, err = db.Exec(buffer.String())
+	if err != nil {
+		log.Println("Issue creating table: " + err.Error())
+		return
+	}
+
+	//Alter permissions
+	buffer.Reset()
+	buffer.WriteString(fmt.Sprintf("ALTER TABLE %s OWNER to postgres; GRANT ALL ON TABLE %s TO postgres;", tablePathName, tablePathName))
+	_, err = db.Exec(buffer.String())
+	if err != nil {
+		log.Println("Issue assigning permissions: " + err.Error())
+		return
+	}
+
+	//Copy data from old table to new table if [alter table]
+	lastSequence := 1
+	if oldTableName != "" {
+		selectFromOld := fmt.Sprintf("SELECT %s FROM %s", strings.Join(structObj.oldAltCols, ", "), oldTableName)
+		insertToNew := fmt.Sprintf("INSERT INTO %s (%s) (%s)", tablePathName, strings.Join(structObj.newAltCols, ", "), selectFromOld)
+		fmt.Println(insertToNew)
+		_, err = db.Exec(insertToNew)
+		if err != nil {
+			log.Printf("\nIssue copying data from %s to %s: %s", oldTableName, tablePathName, err.Error())
+			return
+		}
+		if structObj.oldColPrim != "" {
+			//make sure old table has rows.
+			numRows := 1
+			row = db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", oldTableName))
+			err = row.Scan(&numRows)
+			if err != nil {
+				log.Println("Issue checking table being altered" + err.Error())
+				return
+			}
+			if numRows > 0 {
+				//Get last value for primary key
+				row = db.QueryRow(fmt.Sprintf("Select MAX(%s) from %s", structObj.oldColPrim, oldTableName))
+				err = row.Scan(&lastSequence)
+				if err != nil {
+					log.Println("Issue reading table's primary key :" + err.Error())
+					return
+				}
+				lastSequence = lastSequence + 1
+			}
+		}
+	}
+
+	//Add Primary Key
+	_, err = db.Exec(fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT %s PRIMARY KEY (%s);", tablePathName, pkConstraint, primCol))
+	if err != nil {
+		log.Println("Creating the primary key constraint failed: " + err.Error())
+		return
+	}
+
+	//Create and add sequence to primary key
+	fmt.Println(fmt.Sprintf("CREATE SEQUENCE %s INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 START %d CACHE 1; ALTER TABLE %s OWNER to postgres; GRANT ALL ON TABLE %s TO postgres;", seqName, lastSequence, seqName, seqName))
+	_, err = db.Exec(fmt.Sprintf("CREATE SEQUENCE %s INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 START %d CACHE 1; ALTER TABLE %s OWNER to postgres; GRANT ALL ON TABLE %s TO postgres;", seqName, lastSequence, seqName, seqName))
+	if err != nil {
+		log.Println("Creating the primary key sequence failed: " + err.Error())
+		return
+	}
+
+	//Bind sequence to primary key column as its defualt value
+	_, err = db.Exec(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT nextval('%s'::regclass);", tablePathName, primCol, seqName))
+	if err != nil {
+		log.Println("Binding the default primary key sequence failed: " + err.Error())
+		return
+	}
+
+	//Loop and add indexes if needed
+	for _, stmt := range indexes {
+		_, err = db.Exec(stmt)
+		if err != nil {
+			log.Println("Creating an index failed: " + err.Error())
+			return
+		}
+	}
+
 }
