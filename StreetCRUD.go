@@ -332,13 +332,13 @@ func main() {
 	fmt.Println("////////////////////////////////////////////////////")
 	fmt.Println("")
 	fmt.Printf("Please see github.com/isted/StreetCRUD for instructions:\n")
-	fmt.Printf("Press return to quit.\n")
+	fmt.Printf("Press return at any time to quit.\n")
 	//uiLoop:
 	for {
 		fmt.Printf("\nEnter file path for StreetCRUD struct file: ")
 		_, err := fmt.Scanf("%s", &filePath)
 		if err != nil || filePath == "" {
-			fmt.Print("Exiting StreetCRUD\n\n")
+			fmt.Print("StreetCRUD Closed\n\n")
 			return
 		}
 		isFileFound = true
@@ -530,7 +530,6 @@ func main() {
 												return
 											}
 										}
-										fmt.Println("Test:" + userTbl)
 										structFromFile.tableName = userTbl
 									}
 									continue LineParsed
@@ -698,10 +697,8 @@ func main() {
 											col.size = userOptions[5:strings.IndexRune(userOptions, ']')]
 										case userOptions == "index]":
 											col.index = true
-											fmt.Println("Index")
 										case userOptions == "patch]":
 											col.patch = true
-											fmt.Println("Patch")
 										case userOptions == "deleted]":
 											if strings.ToLower(col.goType) != "bool" {
 												fmt.Println(processFail + "A column marked as [deleted] must have the type bool.")
@@ -711,7 +708,6 @@ func main() {
 											col.deleted = true
 											wasTypeAssigned = true
 										case userOptions == "deletedon]":
-											fmt.Println(col.goType)
 											if strings.ToLower(col.goType) == "time.time" {
 												col.dbType = "timestamp without time zone"
 											} else {
@@ -744,7 +740,6 @@ func main() {
 											fmt.Println(processFail + err.Error())
 											return
 										}
-										fmt.Printf("Nulls No Err: %s", col.goType)
 										//Handle meta data contained w/in ` `
 										strucOptsColumn := strings.Split(sLine, "`")
 										if len(strucOptsColumn) > 1 {
@@ -810,16 +805,6 @@ func main() {
 				} //for range sLine
 			} //for lineSlices
 
-			fmt.Println(dbUser)
-			fmt.Println(password)
-			fmt.Println(dbName)
-			fmt.Println(useSSL)
-			fmt.Println(useUnderscore)
-			fmt.Println(packageName)
-			fmt.Println(reqVarCount)
-			fmt.Println(len(structsToAdd))
-			fmt.Println()
-
 			//Cycle through structsToAdd
 			fileOpen := make(map[string]*os.File)
 			pathChanged := make(map[string]string)
@@ -827,11 +812,10 @@ func main() {
 			//"/Users/disted/go/src/github.com/isted/StreetCRUD/testing.txt"
 			dbConnected := false
 			var db *sql.DB
-			for i, structObj := range structsToAdd {
+			for _, structObj := range structsToAdd {
 				if pathChanged[structObj.fileName] == "" {
 					//New path, check to make sure it doesn't already exist
 					pathChanged[structObj.fileName] = GetSafePathForSave(structObj.fileName)
-					fmt.Println(pathChanged[structObj.fileName])
 				}
 				if fileOpen[pathChanged[structObj.fileName]] == nil {
 					//file is new so don't append
@@ -849,18 +833,11 @@ func main() {
 
 				}
 				fileOpen[pathChanged[structObj.fileName]].Sync()
-				fmt.Printf("Struct: %d\n", i)
-				fmt.Println(structObj.structName)
-				fmt.Println(structObj.tableName)
-				fmt.Println(structObj.fileName)
-				fmt.Println()
-				for _, c := range structObj.cols {
-					fmt.Println("Cols: " + c.colName)
-				}
 
 				//Check to see if user wants to generate or alter tables
 				var yesOrNo string
-				fmt.Printf("\nDo you want to create/alter %s (y or n): ", structObj.tableName)
+				fmt.Printf("File %s generated.", structObj.fileName)
+				fmt.Printf("\nDo you want to create/alter the table %s (y or n): ", structObj.tableName)
 				_, err := fmt.Scanf("%s", &yesOrNo)
 				if err != nil {
 					fmt.Println("An error occurred, exiting Street CRUD.\n")
@@ -890,7 +867,6 @@ func main() {
 			//Close files manually since the defer.Close() doesn't get called until the program exits
 			for _, value := range fileOpen {
 				value.Close()
-				fmt.Println("Closed")
 			}
 
 		}
@@ -1255,7 +1231,6 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB) {
 	//rename old table if it exists
 	if renameTable != structObj.tableName {
 		alterTable := "ALTER TABLE IF EXISTS %s RENAME TO %s;"
-		fmt.Println(fmt.Sprintf(alterTable, tablePathName, fmt.Sprintf("%s.%s", AddQuotesIfAnyUpperCase(structObj.schema), renameTable)))
 		_, err = db.Exec(fmt.Sprintf(alterTable, tablePathName, fmt.Sprintf("%s", renameTable)))
 		if err != nil {
 			log.Println("There was an issue changing the existing table's name: " + err.Error())
@@ -1363,7 +1338,6 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB) {
 		}
 	}
 	buffer.WriteString(" ) WITH (OIDS=FALSE);")
-	fmt.Println(buffer.String())
 	_, err = db.Exec(buffer.String())
 	if err != nil {
 		log.Println("Issue creating table: " + err.Error())
@@ -1384,7 +1358,6 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB) {
 	if oldTableName != "" {
 		selectFromOld := fmt.Sprintf("SELECT %s FROM %s", strings.Join(structObj.oldAltCols, ", "), oldTableName)
 		insertToNew := fmt.Sprintf("INSERT INTO %s (%s) (%s)", tablePathName, strings.Join(structObj.newAltCols, ", "), selectFromOld)
-		fmt.Println(insertToNew)
 		_, err = db.Exec(insertToNew)
 		if err != nil {
 			log.Printf("\nIssue copying data from %s to %s: %s", oldTableName, tablePathName, err.Error())
@@ -1420,7 +1393,6 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB) {
 	}
 
 	//Create and add sequence to primary key
-	fmt.Println(fmt.Sprintf("CREATE SEQUENCE %s INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 START %d CACHE 1; ALTER TABLE %s OWNER to postgres; GRANT ALL ON TABLE %s TO postgres;", seqName, lastSequence, seqName, seqName))
 	_, err = db.Exec(fmt.Sprintf("CREATE SEQUENCE %s INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 START %d CACHE 1; ALTER TABLE %s OWNER to postgres; GRANT ALL ON TABLE %s TO postgres;", seqName, lastSequence, seqName, seqName))
 	if err != nil {
 		log.Println("Creating the primary key sequence failed: " + err.Error())
