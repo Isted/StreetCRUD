@@ -106,7 +106,7 @@ func (col *column) MapNullTypes() error {
 	case "int64":
 		col.goType = "nulls.NullInt64"
 	case "uint32":
-		col.dbType = "nulls.NullUInt32"
+		col.goType = "nulls.NullUInt32"
 	case "float32":
 		col.goType = "nulls.NullFloat32"
 	case "float64":
@@ -145,9 +145,6 @@ func ConvertToUnderscore(camel string) (string, error) {
 	var prevRune rune
 	var underscore []rune
 	for index, runeChar := range camel {
-		if runeChar == '_' {
-			return strings.ToLower(camel), nil
-		}
 		if index == 0 {
 			if !unicode.IsLetter(runeChar) {
 				return "", fmt.Errorf("Table and column names can't start with a character other than a letter.")
@@ -331,7 +328,7 @@ func main() {
 	fmt.Println("")
 	fmt.Println("////////////////////////////////////////////////////")
 	fmt.Println("")
-	fmt.Printf("Please see github.com/isted/StreetCRUD for instructions:\n")
+	fmt.Printf("Please see github.com/isted/StreetCRUD for instructions.\n")
 	fmt.Printf("Press return at any time to quit.\n")
 	//uiLoop:
 	for {
@@ -749,7 +746,7 @@ func main() {
 										}
 									}
 
-									//add the built struct to the slice of structs to use for code gen
+									//add the built struct to the slice of structs to use later for code gen
 									structFromFile.cols = append(structFromFile.cols, col)
 
 								} else {
@@ -893,13 +890,11 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	var primVarName string
 	var primVarType string
 	var delColName string
-	var delVarName string
 	var delOnColName string
-	var delOnVarName string
 	var delColType string
 	var delOnColType string
-	var delNullLine string
 	var tablePathName string = fmt.Sprintf("%s.%s.%s", AddQuotesIfAnyUpperCase(structFromFile.database), AddQuotesIfAnyUpperCase(structFromFile.schema), structFromFile.tableName)
+	structObject := LowerCaseFirstChar(structFromFile.structName)
 
 	//Write package and imports
 	if isNew {
@@ -922,7 +917,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		buffer.WriteString(fmt.Sprintf("var %s %sDataLayer\n", dataLayerVar, structFromFile.structName))
 	} else {
 		buffer.WriteString("\n//Global DB Pointer\n")
-		buffer.WriteString("var db *sql.DB\n")
+		buffer.WriteString(fmt.Sprintf("var %sDB *sql.DB\n", structObject))
 	}
 
 	//Get name of primary column and deleted column
@@ -932,18 +927,17 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 			primVarName = col.varName
 			primVarType = col.goType
 		} else if col.deleted {
-			delColName = col.colName
-			delVarName = col.varName
+			//ignore [nulls] if a column is marked as [deleted]
 			if col.nulls {
-				delColType = "nulls.NullBool"
-				delNullLine = " and (" + col.colName + " is null or " + col.colName + " = false)"
-			} else {
-				delNullLine = " and (" + col.colName + " = false)"
-				delColType = "bool"
+				col.dbType = "boolean"
+				col.goType = "bool"
+				col.structLine = strings.Replace(col.structLine, "nulls.NullBool", "bool", 1)
+				col.nulls = false
 			}
+			delColName = col.colName
+			delColType = col.goType
 		} else if col.deletedOn {
 			delOnColName = col.colName
-			delOnVarName = col.varName
 			delOnColType = "time.Time"
 			if col.nulls {
 				delOnColType = "nulls.NullTime"
@@ -962,7 +956,6 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	var updateVars []string
 	var insertVars []string
 	var sqlVarFinal string
-	structObject := LowerCaseFirstChar(structFromFile.structName)
 	i := 0
 	for _, col := range structFromFile.cols {
 		//build slices for insert and update statements
@@ -982,7 +975,10 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 
 	for _, col := range structFromFile.cols {
 		if col.index {
-			indexMethods = append(indexMethods, []string{fmt.Sprintf("Get%ssBy%s", structFromFile.structName, UpperCaseFirstChar(col.varName)), fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1 ORDER BY %s", strings.Join(selectVals, ", "), tablePathName, primColName, primColName), LowerCaseFirstChar(col.varName), col.goType, fmt.Sprintf("GetBy%s", UpperCaseFirstChar(col.varName))})
+			indexMethods = append(indexMethods, []string{fmt.Sprintf("Get%ssBy%s", structFromFile.structName, UpperCaseFirstChar(col.varName)), fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1 ORDER BY %s", strings.Join(selectVals, ", "), tablePathName, col.colName, primColName), LowerCaseFirstChar(col.varName), col.goType, fmt.Sprintf("GetBy%s", UpperCaseFirstChar(col.varName))})
+			if delColName != "" {
+				indexMethods[len(indexMethods)-1][1] = fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1 and (%s = $2 or %s = $3) ORDER BY %s", strings.Join(selectVals, ", "), tablePathName, col.colName, delColName, delColName, primColName)
+			}
 		}
 		if col.patch {
 			patchMethods = append(patchMethods, []string{"Patch" + UpperCaseFirstChar(col.varName), fmt.Sprintf("UPDATE %s SET %s = $1 WHERE %s = $2", tablePathName, col.colName, primColName), LowerCaseFirstChar(col.varName), col.goType, fmt.Sprintf("Patch%s", UpperCaseFirstChar(col.varName)), col.varName})
@@ -991,7 +987,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 
 	selectStmt := fmt.Sprintf("SELECT %s FROM %s WHERE %s = $1", strings.Join(selectVals, ", "), tablePathName, primColName)
 	if delColName != "" {
-		selectStmt = selectStmt + delNullLine
+		selectStmt = fmt.Sprintf("%s and (%s = $2 or %s = $3)", selectStmt, delColName, delColName)
 	}
 	updateStmt := fmt.Sprintf("UPDATE %s SET %s WHERE %s = %s", tablePathName, strings.Join(updateSet, ", "), primColName, sqlVarFinal)
 	insertStmt := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING %s", tablePathName, strings.Join(insertSet, ", "), strings.Join(insertVals, ", "), primColName)
@@ -1044,6 +1040,11 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		buffer.WriteString("dl.Init = false\n}\n}\n")
 	}
 
+	//Write constants used to alter Get queries
+	if delColName != "" {
+		buffer.WriteString("const (\nEXISTS = iota\nDELETED = iota\nALL = iota\n)\n\n")
+	}
+
 	//Write struct
 	buffer.WriteString("\ntype ")
 	buffer.WriteString(structFromFile.structName)
@@ -1055,15 +1056,24 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	buffer.WriteString("}\n\n")
 
 	//Write New()
-	buffer.WriteString(fmt.Sprintf("//Initialize and fill a %s object from the DB\nfunc New%s(%s %s) (*%s, error) {\n", structFromFile.structName, structFromFile.structName, primVarName, primVarType, structFromFile.structName))
+	delFilter := ""
+	if delColName != "" {
+		delFilter = ", delFilter int"
+	}
+	buffer.WriteString(fmt.Sprintf("//Initialize and fill a %s object from the DB\nfunc New%s(%s %s%s) (*%s, error) {\n", structFromFile.structName, structFromFile.structName, LowerCaseFirstChar(primVarName), primVarType, delFilter, structFromFile.structName))
 	buffer.WriteString(fmt.Sprintf("%s := new(%s)\n", structObject, structFromFile.structName))
+	delFilter = ""
+	if delColName != "" {
+		delFilter = ", deleted1, deleted2"
+		buffer.WriteString("deleted1 := false\ndeleted2 = false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
+	}
 	if structFromFile.prepared {
-		buffer.WriteString(fmt.Sprintf("row := %s.GetBy.QueryRow(%s)\n", dataLayerVar, primVarName))
+		buffer.WriteString(fmt.Sprintf("row := %s.GetBy.QueryRow(%s%s)\n", dataLayerVar, LowerCaseFirstChar(primVarName), delFilter))
 	} else {
-		buffer.WriteString(fmt.Sprintf("row := db.QueryRow(\"%s\", %s)\n", selectStmt, primVarName))
+		buffer.WriteString(fmt.Sprintf("row := %sDB.QueryRow(\"%s\", %s%s)\n", structObject, selectStmt, LowerCaseFirstChar(primVarName), delFilter))
 	}
 	buffer.WriteString(fmt.Sprintf("err := row.Scan(%s)\n", strings.Join(objectVars, ", ")))
-	buffer.WriteString("if err != nil {\nlog.Println(err.Error())\nreturn err\n}\nreturn nil\n}\n\n")
+	buffer.WriteString(fmt.Sprintf("if err != nil {\nlog.Println(err.Error())\nreturn nil, err\n}\nreturn %s, nil\n}\n\n", structObject))
 
 	//Write UserFromJSON()
 	buffer.WriteString(fmt.Sprintf("//Transform JSON into a %s object\nfunc %sFromJSON(%sJSON []byte) (*%s, error) {\n", structFromFile.structName, structFromFile.structName, structObject, structFromFile.structName))
@@ -1079,11 +1089,20 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	buffer.WriteString(fmt.Sprintf("%ssJSON, err := json.Marshal(%ss)\nreturn %ssJSON, err\n}\n\n", structObject, structObject, structObject))
 
 	//Write GetBy()
-	buffer.WriteString(fmt.Sprintf("//Fill %s object with data from DB\nfunc (%s *%s) GetBy(%s %s) error {\n", structFromFile.structName, structObject, structFromFile.structName, primVarName, primVarType))
+	delFilter = ""
+	if delColName != "" {
+		delFilter = ", delFilter int"
+	}
+	buffer.WriteString(fmt.Sprintf("//Fill %s object with data from DB\nfunc (%s *%s) GetBy(%s %s%s) error {\n", structFromFile.structName, structObject, structFromFile.structName, LowerCaseFirstChar(primVarName), primVarType, delFilter))
+	delFilter = ""
+	if delColName != "" {
+		delFilter = ", deleted1, deleted2"
+		buffer.WriteString("deleted1 := false\ndeleted2 = false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
+	}
 	if structFromFile.prepared {
-		buffer.WriteString(fmt.Sprintf("row := %sSQL.GetBy.QueryRow(%s)\n", structObject, primVarName))
+		buffer.WriteString(fmt.Sprintf("row := %s.GetBy.QueryRow(%s%s)\n", dataLayerVar, LowerCaseFirstChar(primVarName), delFilter))
 	} else {
-		buffer.WriteString(fmt.Sprintf("row := db.QueryRow(\"%s\", %s)\n", selectStmt, primVarName))
+		buffer.WriteString(fmt.Sprintf("row := %sDB.QueryRow(\"%s\", %s%s)\n", structObject, selectStmt, LowerCaseFirstChar(primVarName), delFilter))
 	}
 	buffer.WriteString(fmt.Sprintf("err := row.Scan(%s)\n", strings.Join(objectVars, ", ")))
 	buffer.WriteString("if err != nil {\nlog.Println(err.Error())\nreturn err\n}\nreturn nil\n}\n\n")
@@ -1091,9 +1110,9 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	//Write Insert()
 	buffer.WriteString(fmt.Sprintf("//Insert %s object to DB\nfunc (%s *%s) Insert() error {\n", structFromFile.structName, structObject, structFromFile.structName))
 	if structFromFile.prepared {
-		buffer.WriteString(fmt.Sprintf("var id int\n row := %sSQL.Insert.QueryRow(%s)\n", structObject, strings.Join(insertVars, ", ")))
+		buffer.WriteString(fmt.Sprintf("var id int\n row := %s.Insert.QueryRow(%s)\n", dataLayerVar, strings.Join(insertVars, ", ")))
 	} else {
-		buffer.WriteString(fmt.Sprintf("var id int\n row := db.QueryRow(\"%s\", %s)\n", insertStmt, strings.Join(insertVars, ", ")))
+		buffer.WriteString(fmt.Sprintf("var id int\n row := %sDB.QueryRow(\"%s\", %s)\n", structObject, insertStmt, strings.Join(insertVars, ", ")))
 	}
 	buffer.WriteString(fmt.Sprintf("err := row.Scan(&id)\nif err != nil {\nlog.Println(err.Error())\nreturn err\n}\n%s.%s = id\nreturn nil\n}\n\n", structObject, primVarName))
 
@@ -1102,37 +1121,49 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	if structFromFile.prepared {
 		buffer.WriteString(fmt.Sprintf("_, err := %s.Update.Exec(%s)\n", dataLayerVar, strings.Join(updateVars, ", ")))
 	} else {
-		buffer.WriteString(fmt.Sprintf("_, err := db.Exec(\"%s\", %s)\n", updateStmt, strings.Join(updateVars, ", ")))
+		buffer.WriteString(fmt.Sprintf("_, err := %sDB.Exec(\"%s\", %s)\n", structObject, updateStmt, strings.Join(updateVars, ", ")))
 	}
 	buffer.WriteString("if err != nil {\nlog.Println(err.Error())\nreturn err\n}\nreturn nil\n}\n\n")
 
 	//Write MarkDeleted() if needed
 	if delColName != "" {
 		buffer.WriteString(fmt.Sprintf("//Mark a row as deleted and at time.Time\nfunc (%s *%s) MarkDeleted(del ", structObject, structFromFile.structName))
-		buffer.WriteString(fmt.Sprintf("%s, when %s) error {\n%s.%s = del\n%s.%s = when\n", delColType, delOnColType, structObject, delColName, structObject, delOnColName))
+		buffer.WriteString(fmt.Sprintf("%s, when %s) error {\n", delColType, delOnColType))
 		if structFromFile.prepared {
-			buffer.WriteString(fmt.Sprintf("_, err := %sSQL.MarkDel.Exec(%s.%s, %s.%s, %s.%s)\n", structObject, structObject, delVarName, structObject, delOnVarName, structObject, primVarName))
+			buffer.WriteString(fmt.Sprintf("_, err := %s.MarkDel.Exec(del, when, %s.%s)\n", dataLayerVar, structObject, primVarName))
 		} else {
-			buffer.WriteString(fmt.Sprintf("_, err := db.Exec(\"%s\", %s.%s, %s.%s, %s.%s)\n", markDelStmt, structObject, delVarName, structObject, delOnVarName, structObject, primVarName))
+			buffer.WriteString(fmt.Sprintf("_, err := %sDB.Exec(\"%s\", del, when, %s.%s)\n", dataLayerVar, markDelStmt, structObject, primVarName))
 		}
-		buffer.WriteString("if err != nil {\nlog.Println(err.Error())\nreturn err\n}\nreturn nil\n}\n\n")
+		buffer.WriteString("if err != nil {\nlog.Println(err.Error())\nreturn err\n}\n")
+		buffer.WriteString(fmt.Sprintf("%s.%s = del\n%s.%s = when\n", structObject, delColName, structObject, delOnColName))
+		buffer.WriteString("return nil\n}\n\n")
 	}
 
 	//Write Delete()
-	buffer.WriteString(fmt.Sprintf("func (%s *%s) Delete() error {\n_, err := %sSQL.Delete.Exec(%s.%s)\n", structObject, structFromFile.structName, structObject, structObject, primVarName))
+	buffer.WriteString(fmt.Sprintf("//Delete will remove the matching row from the DB"))
+	buffer.WriteString(fmt.Sprintf("\nfunc (%s *%s) Delete() error {\n_, err := %s.Delete.Exec(%s.%s)\n", structObject, structFromFile.structName, structObject, structObject, primVarName))
 	buffer.WriteString("if err != nil {\nlog.Println(err.Error())\nreturn err\n}\nreturn nil\n}\n\n")
 
 	//Write GetObjectsByColumn
 	for _, method := range indexMethods {
 		buffer.WriteString(fmt.Sprintf("//Get %ss by %s\n", structFromFile.structName, method[2]))
-		buffer.WriteString(fmt.Sprintf("func %s(%s %s) ([]*%s, error) {\n", method[0], method[2], method[3], structFromFile.structName))
-		if structFromFile.prepared {
-			buffer.WriteString(fmt.Sprintf("rows, err := %sSQL.%s.Query(%s)\n", structObject, method[4], method[2]))
-		} else {
-			buffer.WriteString(fmt.Sprintf("rows, err := db.Query(\"%s\", %s)\n", method[1], method[2]))
+		delFilter = ""
+		if delColName != "" {
+			delFilter = ", delFilter int"
 		}
-		buffer.WriteString("if err != nil {\nrows.Close()\nlog.Println(err.Error())\nreturn nil, err\n}\n\n")
-		buffer.WriteString(fmt.Sprintf("%s := []*%s{}\nfor rows.Next() {\nif err = rows.Scan(%s); err != nil {\n", structObject, structFromFile.structName, strings.Join(objectVars, ", ")))
+		buffer.WriteString(fmt.Sprintf("func %s(%s %s%s) ([]*%s, error) {\n", method[0], method[2], method[3], delFilter, structFromFile.structName))
+		delFilter = ""
+		if delColName != "" {
+			delFilter = ", deleted1, deleted2"
+			buffer.WriteString("deleted1 := false\ndeleted2 = false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
+		}
+		if structFromFile.prepared {
+			buffer.WriteString(fmt.Sprintf("rows, err := %s.%s.Query(%s%s)\n", dataLayerVar, method[4], method[2], delFilter))
+		} else {
+			buffer.WriteString(fmt.Sprintf("rows, err := %sDB.Query(\"%s\", %s%s)\n", structObject, method[1], method[2], delFilter))
+		}
+		buffer.WriteString("if err != nil {\nrows.Close()\nlog.Println(err.Error())\nreturn nil, err\n}\n")
+		buffer.WriteString(fmt.Sprintf("%ss := []*%s{}\nfor rows.Next() {\n%s := new(%s)\nif err = rows.Scan(%s); err != nil {\n", structObject, structFromFile.structName, structObject, structFromFile.structName, strings.Join(objectVars, ", ")))
 		buffer.WriteString("log.Println(err.Error())\nrows.Close()\nreturn")
 		buffer.WriteString(fmt.Sprintf(" %ss, err\n}\n%ss = append(%ss, %s)\n}\n\nrows.Close()\nreturn %ss, nil\n}\n\n", structObject, structObject, structObject, structObject, structObject))
 	}
@@ -1141,13 +1172,14 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	for _, method := range patchMethods {
 		buffer.WriteString(fmt.Sprintf("//Update %s only\n", method[2]))
 		buffer.WriteString(fmt.Sprintf("func (%s *%s) %s(%s %s) error {\n", structObject, structFromFile.structName, method[0], method[2], method[3]))
-		buffer.WriteString(fmt.Sprintf("%s.%s = %s\n", structObject, method[5], method[2]))
 		if structFromFile.prepared {
-			buffer.WriteString(fmt.Sprintf("_, err := %sSQL.%s.Exec(%s, %s.%s)\n", structObject, method[4], method[2], structObject, primVarName))
+			buffer.WriteString(fmt.Sprintf("_, err := %s.%s.Exec(%s, %s.%s)\n", dataLayerVar, method[4], method[2], structObject, primVarName))
 		} else {
-			buffer.WriteString(fmt.Sprintf("_, err := db.Exec(\"%s\", %s, %s.%s)\n", method[1], method[2], structObject, primVarName))
+			buffer.WriteString(fmt.Sprintf("_, err := %sDB.Exec(\"%s\", %s, %s.%s)\n", structObject, method[1], method[2], structObject, primVarName))
 		}
-		buffer.WriteString("if err != nil {\nlog.Println(err.Error())\nreturn err\n}\nreturn nil\n}\n\n")
+		buffer.WriteString("if err != nil {\nlog.Println(err.Error())\nreturn err\n}\n")
+		buffer.WriteString(fmt.Sprintf("%s.%s = %s\n", structObject, method[5], method[2]))
+		buffer.WriteString("return nil\n}\n\n")
 	}
 
 	return buffer.String()
@@ -1355,15 +1387,16 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB) {
 
 	//Copy data from old table to new table if [alter table]
 	lastSequence := 1
+	copyData := true
 	if oldTableName != "" {
 		selectFromOld := fmt.Sprintf("SELECT %s FROM %s", strings.Join(structObj.oldAltCols, ", "), oldTableName)
 		insertToNew := fmt.Sprintf("INSERT INTO %s (%s) (%s)", tablePathName, strings.Join(structObj.newAltCols, ", "), selectFromOld)
 		_, err = db.Exec(insertToNew)
 		if err != nil {
-			log.Printf("\nIssue copying data from %s to %s: %s", oldTableName, tablePathName, err.Error())
-			return
+			log.Printf("\nIssue copying data from %s to %s: %s\n", oldTableName, tablePathName, err.Error())
+			copyData = false
 		}
-		if structObj.oldColPrim != "" {
+		if structObj.oldColPrim != "" && copyData {
 			//make sure old table has rows.
 			numRows := 1
 			row = db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", oldTableName))
