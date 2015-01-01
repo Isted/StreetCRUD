@@ -508,9 +508,6 @@ func main() {
 								structFromFile.prepared = true
 								continue LineParsed
 							} //switch
-							if dbGroup == "" {
-								dbGroup = dbUser
-							}
 						}
 
 					} else if inAddStructState {
@@ -812,6 +809,11 @@ func main() {
 
 				} //for range sLine
 			} //for lineSlices
+
+			//Assign user to group if group wasn't defined in the file
+			if dbGroup == "" {
+				dbGroup = dbUser
+			}
 
 			//Cycle through structsToAdd
 			fileOpen := make(map[string]*os.File)
@@ -1374,6 +1376,9 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 		buffer.WriteString(fmt.Sprintf("%s %s ", col.colName, col.dbType))
 		if !col.nulls || col.primary {
 			buffer.WriteString("NOT NULL")
+		}
+		if col.deleted {
+			buffer.WriteString(" DEFAULT false")
 		}
 		if i < len(structObj.cols)-1 {
 			buffer.WriteString(", ")
