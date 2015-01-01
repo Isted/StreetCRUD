@@ -291,9 +291,10 @@ func GetSafePathForSave(filePath string) string {
 
 //The start of the main program
 func main() {
-	const reqBaseVarsC = 8
+	const reqBaseVarsC = 9
 	var server string
 	var dbUser string
+	var dbGroup string
 	var password string
 	var dbName string
 	var schemaName string
@@ -401,6 +402,14 @@ func main() {
 								}
 								reqVarCount = reqVarCount + 1
 								continue LineParsed
+
+							case "[group]":
+								if utf8.RuneCountInString(sLine) > letterIndex+1 {
+									dbGroup = strings.TrimSpace(string(sLine[letterIndex+1:]))
+								}
+								reqVarCount = reqVarCount + 1
+								continue LineParsed
+
 							case "[password]":
 								if utf8.RuneCountInString(sLine) <= letterIndex+1 {
 									fmt.Print(processFail + "No [Password] was specified.\n")
@@ -499,7 +508,9 @@ func main() {
 								structFromFile.prepared = true
 								continue LineParsed
 							} //switch
-
+							if dbGroup == "" {
+								dbGroup = dbUser
+							}
 						}
 
 					} else if inAddStructState {
@@ -806,7 +817,6 @@ func main() {
 			fileOpen := make(map[string]*os.File)
 			pathChanged := make(map[string]string)
 			connString := BuildConnString(dbUser, password, dbName, server, useSSL)
-			//"/Users/disted/go/src/github.com/isted/StreetCRUD/testing.txt"
 			dbConnected := false
 			var db *sql.DB
 			for _, structObj := range structsToAdd {
@@ -854,7 +864,7 @@ func main() {
 							return
 						}
 					}
-					CreateOrAlterTables(structObj, db)
+					CreateOrAlterTables(structObj, db, dbGroup)
 				}
 
 			} //end range structsToAdd
@@ -1185,7 +1195,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	return buffer.String()
 }
 
-//Builds the connection string from file
+//BuildConnString builds the connection string from file
 func BuildConnString(dbUser string, password string, dbName string, server string, useSSL bool) string {
 
 	var buffer bytes.Buffer
@@ -1208,7 +1218,7 @@ func BuildConnString(dbUser string, password string, dbName string, server strin
 }
 
 //CreateOrAlterTables creates and alters tables based on the struct definition file
-func CreateOrAlterTables(structObj *structToCreate, db *sql.DB) {
+func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 	var tablePathName string = fmt.Sprintf("%s.%s.%s", AddQuotesIfAnyUpperCase(structObj.database), AddQuotesIfAnyUpperCase(structObj.schema), structObj.tableName)
 	var oldTableName string
 	var row *sql.Row
@@ -1378,7 +1388,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB) {
 
 	//Alter permissions
 	buffer.Reset()
-	buffer.WriteString(fmt.Sprintf("ALTER TABLE %s OWNER to postgres; GRANT ALL ON TABLE %s TO postgres;", tablePathName, tablePathName))
+	buffer.WriteString(fmt.Sprintf("ALTER TABLE %s OWNER to %s; GRANT ALL ON TABLE %s TO %s;", tablePathName, group, tablePathName, group))
 	_, err = db.Exec(buffer.String())
 	if err != nil {
 		log.Println("Issue assigning permissions: " + err.Error())
@@ -1426,7 +1436,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB) {
 	}
 
 	//Create and add sequence to primary key
-	_, err = db.Exec(fmt.Sprintf("CREATE SEQUENCE %s INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 START %d CACHE 1; ALTER TABLE %s OWNER to postgres; GRANT ALL ON TABLE %s TO postgres;", seqName, lastSequence, seqName, seqName))
+	_, err = db.Exec(fmt.Sprintf("CREATE SEQUENCE %s INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 START %d CACHE 1; ALTER TABLE %s OWNER to %s; GRANT ALL ON TABLE %s TO %s;", seqName, lastSequence, seqName, group, seqName, group))
 	if err != nil {
 		log.Println("Creating the primary key sequence failed: " + err.Error())
 		return
