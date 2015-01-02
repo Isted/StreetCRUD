@@ -1,6 +1,7 @@
 StreetCRUD
 [Server] localhost
 [User]   dan
+[Group] sqlgroupname
 [Password]   secret  
 [Database] db_name
 [schema] public
@@ -9,8 +10,9 @@ StreetCRUD
 [package]models
 
 [Add struct]
-[table] Tbl_Name
+[table]
 [File name] XUsers
+[prepared] true
 type User struct {
 	LoginID  int    `json:"loginid"` [primary]
 	Name     string `json:"name, omitempty"` [index]   [patch][size:255]
@@ -21,7 +23,7 @@ type User struct {
 }
 
 [add struct]
-[table]
+[table] blog
 [File name] XUsers
 [prepared] false
 type Blog struct {
@@ -36,14 +38,14 @@ type Blog struct {
 }
 
 
-[alter table] User
+[alter table] user
 [copy cols]
 login_id [to] LogID
 name [to] UserName
 email [to] Email
 [add Struct]
 [table] tbl_new_name
-[File name] x9.Go
+[File name] x9.go
 [prepared] true
 type UserNew struct {
 	LogID int `json:"loginid"`	 	[primary]

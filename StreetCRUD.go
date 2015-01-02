@@ -156,14 +156,11 @@ func main() {
 								reqVarCount = reqVarCount + 1
 								continue LineParsed
 							case "[schema]":
-								if utf8.RuneCountInString(sLine) <= letterIndex+1 {
-									fmt.Print(processFail + "No Schema was specified.\n")
-									return
+								if utf8.RuneCountInString(sLine) > letterIndex+1 {
+									schemaName = strings.TrimSpace(string(sLine[letterIndex+1:]))
 								}
-								schemaName = strings.TrimSpace(string(sLine[letterIndex+1:]))
 								if schemaName == "" {
-									fmt.Print(processFail + "[Schema] consists of whitespace.\n")
-									return
+									schemaName = "public"
 								}
 								reqVarCount = reqVarCount + 1
 								continue LineParsed
