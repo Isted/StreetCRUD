@@ -61,25 +61,34 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	var delOnColName string
 	var delColType string
 	var delOnColType string
+	var delVarName string
+	var delOnVarName string
 	var tablePathName string = fmt.Sprintf("%s.%s.%s", AddQuotesIfAnyUpperCase(structFromFile.database), AddQuotesIfAnyUpperCase(structFromFile.schema), structFromFile.tableName)
 	structObject := LowerCaseFirstChar(structFromFile.structName)
 
 	//Write package and imports
 	if isNew {
+		//discover if the time package needs to be included
+		time := "\n"
+		for _, col := range structFromFile.cols {
+			if col.deletedOn && !col.nulls {
+				time = "\n\"time\"\n"
+			}
+		}
 		buffer.WriteString("package ")
 		buffer.WriteString(packageName)
 		buffer.WriteString("\n\n")
 		buffer.WriteString("import (\n")
 		buffer.WriteString("\"database/sql\"\n_ \"github.com/lib/pq\"\n\"encoding/json\"\n\"log\"")
-		buffer.WriteString("\n\"time\"")
+		buffer.WriteString(time)
 		if structFromFile.nullsPkg {
-			buffer.WriteString("\n\"github.com/markbates/going/nulls\"")
+			buffer.WriteString("\"github.com/markbates/going/nulls\"")
 		}
 		buffer.WriteString("\n)\n")
 	}
 
 	//Write global variable if generated code will be using prepared stmts
-	var dataLayerVar string = LowerCaseFirstChar(structFromFile.structName) + "SQL"
+	var dataLayerVar string = UpperCaseFirstChar(structFromFile.structName) + "SQL"
 	if structFromFile.prepared {
 		buffer.WriteString("\n//Global Data Layer\n")
 		buffer.WriteString(fmt.Sprintf("var %s %sDataLayer\n", dataLayerVar, structFromFile.structName))
@@ -104,12 +113,14 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 			}
 			delColName = col.colName
 			delColType = col.goType
+			delVarName = col.varName
 		} else if col.deletedOn {
 			delOnColName = col.colName
 			delOnColType = "time.Time"
 			if col.nulls {
 				delOnColType = "nulls.NullTime"
 			}
+			delOnVarName = col.varName
 		}
 	}
 
@@ -180,7 +191,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 
 		//Write InitDataLayer f() and prepared sql statments
 		buffer.WriteString(fmt.Sprintf("\nfunc Init%sDataLayer(db *sql.DB) error {\nvar err error\nif !%s.Init {\n", structFromFile.structName, dataLayerVar))
-		buffer.WriteString(fmt.Sprintf("%s.GetBy, err = db.Prepare(\"%s\")\n", dataLayerVar, selectStmt))
+		buffer.WriteString(fmt.Sprintf("%s.GetByID, err = db.Prepare(\"%s\")\n", dataLayerVar, selectStmt))
 		buffer.WriteString(fmt.Sprintf("%s.Update, err = db.Prepare(\"%s\")\n", dataLayerVar, updateStmt))
 		buffer.WriteString(fmt.Sprintf("%s.Insert, err = db.Prepare(\"%s\")\n", dataLayerVar, insertStmt))
 		buffer.WriteString(fmt.Sprintf("%s.MarkDel, err = db.Prepare(\"%s\")\n", dataLayerVar, markDelStmt))
@@ -195,7 +206,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		buffer.WriteString(fmt.Sprintf("%s.Init = true\n%s.DB = db\n}\nreturn err\n}\n", dataLayerVar, dataLayerVar))
 		//Write CloseStmts f()
 		buffer.WriteString(fmt.Sprintf("\nfunc (dl *%sDataLayer) CloseStmts() {\n", structFromFile.structName))
-		buffer.WriteString("if dl.Init {\ndl.GetBy.Close()\ndl.Update.Close()\ndl.Insert.Close()\ndl.Delete.Close()\n")
+		buffer.WriteString("if dl.Init {\ndl.GetByID.Close()\ndl.Update.Close()\ndl.Insert.Close()\ndl.Delete.Close()\n")
 		if delColName != "" {
 			buffer.WriteString("dl.MarkDel.Close()\n")
 		}
@@ -233,10 +244,10 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	delFilter = ""
 	if delColName != "" {
 		delFilter = ", deleted1, deleted2"
-		buffer.WriteString("deleted1 := false\ndeleted2 = false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
+		buffer.WriteString("deleted1 := false\ndeleted2 := false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
 	}
 	if structFromFile.prepared {
-		buffer.WriteString(fmt.Sprintf("row := %s.GetBy.QueryRow(%s%s)\n", dataLayerVar, LowerCaseFirstChar(primVarName), delFilter))
+		buffer.WriteString(fmt.Sprintf("row := %s.GetByID.QueryRow(%s%s)\n", dataLayerVar, LowerCaseFirstChar(primVarName), delFilter))
 	} else {
 		buffer.WriteString(fmt.Sprintf("row := %sDB.QueryRow(\"%s\", %s%s)\n", structObject, selectStmt, LowerCaseFirstChar(primVarName), delFilter))
 	}
@@ -265,10 +276,10 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	delFilter = ""
 	if delColName != "" {
 		delFilter = ", deleted1, deleted2"
-		buffer.WriteString("deleted1 := false\ndeleted2 = false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
+		buffer.WriteString("deleted1 := false\ndeleted2 := false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
 	}
 	if structFromFile.prepared {
-		buffer.WriteString(fmt.Sprintf("row := %s.GetBy.QueryRow(%s%s)\n", dataLayerVar, LowerCaseFirstChar(primVarName), delFilter))
+		buffer.WriteString(fmt.Sprintf("row := %s.GetByID.QueryRow(%s%s)\n", dataLayerVar, LowerCaseFirstChar(primVarName), delFilter))
 	} else {
 		buffer.WriteString(fmt.Sprintf("row := %sDB.QueryRow(\"%s\", %s%s)\n", structObject, selectStmt, LowerCaseFirstChar(primVarName), delFilter))
 	}
@@ -303,13 +314,13 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 			buffer.WriteString(fmt.Sprintf("_, err := %sDB.Exec(\"%s\", del, when, %s.%s)\n", dataLayerVar, markDelStmt, structObject, primVarName))
 		}
 		buffer.WriteString("if err != nil {\nlog.Println(err.Error())\nreturn err\n}\n")
-		buffer.WriteString(fmt.Sprintf("%s.%s = del\n%s.%s = when\n", structObject, delColName, structObject, delOnColName))
+		buffer.WriteString(fmt.Sprintf("%s.%s = del\n%s.%s = when\n", structObject, delVarName, structObject, delOnVarName))
 		buffer.WriteString("return nil\n}\n\n")
 	}
 
 	//Write Delete()
 	buffer.WriteString(fmt.Sprintf("//Delete will remove the matching row from the DB"))
-	buffer.WriteString(fmt.Sprintf("\nfunc (%s *%s) Delete() error {\n_, err := %s.Delete.Exec(%s.%s)\n", structObject, structFromFile.structName, structObject, structObject, primVarName))
+	buffer.WriteString(fmt.Sprintf("\nfunc (%s *%s) Delete() error {\n_, err := %s.Delete.Exec(%s.%s)\n", structObject, structFromFile.structName, dataLayerVar, structObject, primVarName))
 	buffer.WriteString("if err != nil {\nlog.Println(err.Error())\nreturn err\n}\nreturn nil\n}\n\n")
 
 	//Write GetObjectsByColumn
@@ -323,7 +334,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		delFilter = ""
 		if delColName != "" {
 			delFilter = ", deleted1, deleted2"
-			buffer.WriteString("deleted1 := false\ndeleted2 = false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
+			buffer.WriteString("deleted1 := false\ndeleted2 := false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
 		}
 		if structFromFile.prepared {
 			buffer.WriteString(fmt.Sprintf("rows, err := %s.%s.Query(%s%s)\n", dataLayerVar, method[4], method[2], delFilter))
