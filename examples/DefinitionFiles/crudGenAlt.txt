@@ -1,0 +1,26 @@
+StreetCRUD
+[Server] localhost
+[User]   tut
+[Group] sqlgroupname
+[Password]   secret  
+[Database] db_name
+[schema] public
+[ssl] false
+[Underscore] true
+[package] models
+
+[alter table] user
+[copy cols]
+login_id [to] LogID
+name [to] UserName
+email [to] Email
+[add Struct]
+[table]
+[File name]
+[prepared] false
+type UserA struct {
+	LogID int `json:"loginid"`	 	[primary]
+	UserName string `json:”userName”` [index][patch][size:255]
+	Phone string `json:”phone”` [nulls]
+	Email string `json:”email”` [nulls]
+}

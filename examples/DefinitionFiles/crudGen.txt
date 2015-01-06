@@ -1,0 +1,23 @@
+StreetCRUD
+[Server] localhost
+[User]   dan
+[Group] sqlgroupname
+[Password]   secret  
+[Database] db_name
+[schema] public
+[ssl] false
+[Underscore] true
+[package]models
+
+[Add struct]
+[table]
+[File name]
+[prepared] true
+type User struct {
+	LoginID  int    `json:"loginid"` [primary]
+	Name     string `json:"name, omitempty"` [index]   [patch][size:255]
+	Email    string `json:"email”`[index] [nulls]
+	Password string `json:"password" out:"false"`
+	DeletedUser bool `json:”deleted”` [nulls][deleted]
+	DelOn	   time.Time   `json:”deletedon”`[deletedOn]  [nulls]
+}

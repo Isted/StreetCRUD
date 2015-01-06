@@ -2,10 +2,10 @@ StreetCRUD
 [Server] localhost
 [User]   dan
 [Group] sqlgroupname
-[Password]   secret  
+[Password]   secret
 [Database] db_name
 [schema] public
-[ssl] true
+[ssl] false
 [Underscore] true
 [package]models
 
@@ -46,11 +46,11 @@ email [to] Email
 [add Struct]
 [table] tbl_new_name
 [File name] x9.go
-[prepared] true
+[prepared] false
 type UserNew struct {
 	LogID int `json:"loginid"`	 	[primary]
 	UserName string `json:”userName”` [index][patch][size:255]
 	Phone string `json:”phone”` [nulls]
-	Email float32 `json:”email”` [nulls]
+	Email string `json:”email”` [nulls]
 	Password string `json:"password" out:"false"`
 }
