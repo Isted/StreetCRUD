@@ -1,6 +1,6 @@
 # StreetCRUD
 
-The documentation below may look daunting, but it's just thorough. A video tutorial will be added soon. StreetCRUD is actually quite simple and straightforward to use.
+The documentation below may look daunting, but it's just thorough. StreetCRUD is actually quite simple and straightforward to use. Here is a [video](http://youtu.be/t3CCy1zSGNw "StreetCRUD Tutorial") to get you started.
 
 StreetCRUD is a code and table generation command-line utility for people who aren't fans of ORMs, but appreciate a kick start creating struct methods, tables, and queries for basic CRUD functionality. You only have to supply your structs, database connection info, and a few keywords in a text file that StreetCRUD will process. Tables, queries, and struct methods will be created or altered automatically. This allows the programmer to add methods and queries at a later date without having to wrestle with an ORM. You keep all the power, but don't have to start at level one. At this time, StreetCRUD supports PostgreSQL, JSON, and Golang. As a nice side benefit StreetCRUD can be used to easily reorder columns in Postgres tables.
 
