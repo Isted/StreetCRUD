@@ -1,23 +1,10 @@
 # StreetCRUD
 
-The documentation below may look daunting, but it's just thorough. StreetCRUD is actually quite simple and straightforward to use. Here is a [video](http://youtu.be/t3CCy1zSGNw "StreetCRUD Tutorial") to get you started.
+###Here is a [video](http://youtu.be/t3CCy1zSGNw "StreetCRUD Tutorial") to get you started.
 
-StreetCRUD is a code and table generation command-line utility for people who aren't fans of ORMs, but appreciate a kick start creating struct methods, tables, and queries for basic CRUD functionality. You only have to supply your structs, database connection info, and a few keywords in a text file that StreetCRUD will process. Tables, queries, and struct methods will be created or altered automatically. This allows the programmer to add methods and queries at a later date without having to wrestle with an ORM. You keep all the power, but don't have to start at level one. At this time, StreetCRUD supports PostgreSQL, JSON, and Golang. As a nice side benefit StreetCRUD can be used to easily reorder columns in Postgres tables.
+StreetCRUD is a code and table generation command-line utility for people who aren't fans of ORMs, but appreciate a kick start creating struct methods, tables, and queries for basic CRUD functionality. You only have to supply your structs, database connection info, and a few keywords in a text file that StreetCRUD will process. Tables, queries, and struct methods will be created or altered automatically. This allows the programmer to add methods and queries at a later date without having to wrestle with an ORM. You keep all the power, but don't have to start at level one. At this time, StreetCRUD supports PostgreSQL, JSON, and Golang.
 
-**Installation (OS X)**:
-
-After downloading the StreetCRUD Go files, navigate, in the command-line, to the StreetCRUD directory in your $GOPATH. Make sure $GOPATH exists, and add it if it doesn't.
-
-If GOBIN isn't set, you can run the following before you install StreetCRUD:
-~~~
-$ export GOBIN=/Users/userName/go/bin
-~~~
-
- now run:
-~~~
-$ go install StreetCRUD.go dbGen.go fileGen.go models.go stringFns.go
-$ StreetCRUD
-~~~
+As a nice side benefit StreetCRUD can be used to easily reorder columns in Postgres tables. The documentation below may look daunting, but it's just thorough. StreetCRUD is actually quite simple and straightforward to use.
 
 **Features Include**:
 * Table creation (if it doesn't exist), table alteration (if it exists)
@@ -29,6 +16,26 @@ $ StreetCRUD
 * Queries can be prepared for optimal performance
 * Null columns are supported for most data types
 * Great for new gophers learning how Go uses databases. Also useful for understanding data types, structs, and struct methods
+
+**Installation (OS X)**:
+
+~~~
+$ go get github.com/isted/StreetCRUD
+~~~
+
+If GOBIN isn't set, you can run the following before you install StreetCRUD:
+~~~
+$ export GOBIN=/Users/userName/go/bin
+~~~
+
+Install:
+~~~
+$ go install StreetCRUD.go dbGen.go fileGen.go models.go stringFns.go
+~~~
+Run:
+~~~
+$ StreetCRUD
+~~~
 
 ##Getting Started
 
