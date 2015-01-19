@@ -38,7 +38,7 @@ func GetSafePathForSave(filePath string) string {
 		tryInt := 1
 		for tryInt > 0 {
 			//filepath.Ext
-			newName = strings.Replace(filePath, ".go", "Gen"+strconv.Itoa(tryInt)+".go", -1)
+			newName = strings.Replace(filePath, ".go", "_gen_"+strconv.Itoa(tryInt)+".go", -1)
 			if _, err := os.Stat(newName); os.IsNotExist(err) {
 				//File doesn't exist here, good to go
 				tryInt = 0
@@ -341,7 +341,9 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		buffer.WriteString(fmt.Sprintf("%s.GetByID, err = db.Prepare(\"%s\")\n", dataLayerVar, selectStmt))
 		buffer.WriteString(fmt.Sprintf("%s.Update, err = db.Prepare(\"%s\")\n", dataLayerVar, updateStmt))
 		buffer.WriteString(fmt.Sprintf("%s.Insert, err = db.Prepare(\"%s\")\n", dataLayerVar, insertStmt))
-		buffer.WriteString(fmt.Sprintf("%s.MarkDel, err = db.Prepare(\"%s\")\n", dataLayerVar, markDelStmt))
+		if delColName != "" {
+			buffer.WriteString(fmt.Sprintf("%s.MarkDel, err = db.Prepare(\"%s\")\n", dataLayerVar, markDelStmt))
+		}
 		buffer.WriteString(fmt.Sprintf("%s.Delete, err = db.Prepare(\"%s\")\n", dataLayerVar, delStmt))
 		//Write patch and index methods if the exist
 		for _, method := range indexMethods {
