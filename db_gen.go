@@ -14,15 +14,16 @@ import (
 func BuildConnString(dbUser string, password string, dbName string, server string, useSSL bool) string {
 
 	var buffer bytes.Buffer
-	buffer.WriteString("postgres://")
+
+	buffer.WriteString("user=")
 	buffer.WriteString(dbUser)
-	buffer.WriteString(":")
-	buffer.WriteString(password)
-	buffer.WriteString("@")
-	buffer.WriteString(server)
-	buffer.WriteString("/")
+	buffer.WriteString(" dbname=")
 	buffer.WriteString(dbName)
-	buffer.WriteString("?sslmode=")
+	buffer.WriteString(" host=")
+	buffer.WriteString(server)
+	buffer.WriteString(" password=")
+	buffer.WriteString(password)
+	buffer.WriteString(" sslmode=")
 	if !useSSL {
 		buffer.WriteString("disable")
 	} else {
