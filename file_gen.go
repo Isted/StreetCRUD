@@ -108,7 +108,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 			if col.nulls {
 				col.dbType = "boolean"
 				col.goType = "bool"
-				col.structLine = strings.Replace(col.structLine, "nulls.NullBool", "bool", 1)
+				col.structLine = strings.Replace(col.structLine, "nulls.Bool", "bool", 1)
 				col.nulls = false
 			}
 			delColName = col.colName
@@ -118,7 +118,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 			delOnColName = col.colName
 			delOnColType = "time.Time"
 			if col.nulls {
-				delOnColType = "nulls.NullTime"
+				delOnColType = "nulls.Time"
 			}
 			delOnVarName = col.varName
 		}

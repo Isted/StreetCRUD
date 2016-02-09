@@ -36,7 +36,7 @@ func main() {
 	//Fill User struct and then insert it into the DB
 	var user *models.User = &models.User{}
 	user.Name = "Viki"
-	user.Email = nulls.NewNullString("Viki@demo.com") //nulls.NullString{"Viki@demo.com", true}
+	user.Email = nulls.NewString("Viki@demo.com") //nulls.String{"Viki@demo.com", true}
 	user.Password = "pass"
 	user.DeletedUser = false
 	err := user.Insert()
@@ -64,7 +64,7 @@ func main() {
 	//Insert two more rows for the demo
 	user3 := models.User{Name: "Sam", Email: nulls.NewNullString("Sam@Sam.com"), Password: "secret"}
 	user3.Insert()
-	user3.Email = nulls.NewNullString("ChangeLocal")
+	user3.Email = nulls.NewString("ChangeLocal")
 	user3.Password = "newSam"
 	user3.Insert()
 
@@ -95,7 +95,7 @@ func main() {
 	fmt.Printf("\n%s was inserted in the DB. Her LoginID is %d.", user4.Name, user4.LoginID)
 
 	//Mark Rachel as a deleted user
-	user4.MarkDeleted(true, nulls.NullTime{time.Now(), true})
+	user4.MarkDeleted(true, nulls.Time{time.Now(), true})
 	fmt.Printf("\n%s marked as deleted at %v.\n", user4.Name, user4.DelOn.Time)
 
 	//Delete

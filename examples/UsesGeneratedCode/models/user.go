@@ -20,10 +20,10 @@ const (
 type User struct {
 	LoginID     int              `json:"loginid"`
 	Name        string           `json:"name, omitempty"`
-	Email       nulls.NullString `json:"email”`
+	Email       nulls.String `json:"email”`
 	Password    string           `json:"password" out:"false"`
 	DeletedUser bool             `json:”deleted”`
-	DelOn       nulls.NullTime   `json:”deletedon”`
+	DelOn       nulls.Time   `json:”deletedon”`
 }
 
 //Initialize and fill a User object from the DB
@@ -114,7 +114,7 @@ func (user *User) Update() error {
 }
 
 //Mark a row as deleted and at time.Time
-func (user *User) MarkDeleted(del bool, when nulls.NullTime) error {
+func (user *User) MarkDeleted(del bool, when nulls.Time) error {
 	_, err := userSQL.MarkDel.Exec(del, when, user.LoginID)
 	if err != nil {
 		log.Println(err.Error())
@@ -168,7 +168,7 @@ func GetUsersByName(name string, delFilter int) ([]*User, error) {
 }
 
 //Get Users by email
-func GetUsersByEmail(email nulls.NullString, delFilter int) ([]*User, error) {
+func GetUsersByEmail(email nulls.String, delFilter int) ([]*User, error) {
 	deleted1 := false
 	deleted2 := false
 	switch delFilter {

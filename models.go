@@ -87,25 +87,25 @@ func (col *column) MapGoTypeToDBTypes() (bool, string) {
 func (col *column) MapNullTypes() error {
 	switch strings.ToLower(col.goType) {
 	case "int":
-		col.goType = "nulls.NullInt"
+		col.goType = "nulls.Int"
 	case "int32":
-		col.goType = "nulls.NullInt32"
+		col.goType = "nulls.Int32"
 	case "int64":
-		col.goType = "nulls.NullInt64"
+		col.goType = "nulls.Int64"
 	case "uint32":
-		col.goType = "nulls.NullUInt32"
+		col.goType = "nulls.UInt32"
 	case "float32":
-		col.goType = "nulls.NullFloat32"
+		col.goType = "nulls.Float32"
 	case "float64":
-		col.goType = "nulls.NullFloat64"
+		col.goType = "nulls.Float64"
 	case "bool":
-		col.goType = "nulls.NullBool"
+		col.goType = "nulls.Bool"
 	case "time.time":
-		col.goType = "nulls.NullTime"
+		col.goType = "nulls.Time"
 	case "string":
-		col.goType = "nulls.NullString"
+		col.goType = "nulls.String"
 	case "[]byte":
-		col.goType = "nulls.NullByteSlice"
+		col.goType = "nulls.ByteSlice"
 	default:
 		return fmt.Errorf("A non-supported data type (" + col.goType + ") was provided as a nullable column. Types must be int64, uint32, int32, int, float64, float32,  string, bool, time.Time, or []byte.")
 	}
