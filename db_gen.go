@@ -62,7 +62,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 		row = db.QueryRow(checkTable, structObj.actionType, structObj.schema)
 		err = row.Scan(&exists)
 		if err != nil {
-			log.Println("An error occurred checking for the table's existence :" + err.Error())
+			log.Println("\nAn error occurred checking for the table's existence :" + err.Error() + "\n")
 			return
 		}
 		if !exists {
@@ -78,7 +78,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 		row = db.QueryRow(checkTable, renameTable, structObj.schema)
 		err = row.Scan(&loop)
 		if err != nil {
-			log.Println("An error occurred checking for the table's existence :" + err.Error())
+			log.Println("\nAn error occurred checking for the table's existence :" + err.Error() + "\n")
 			return
 		}
 		if loop {
@@ -91,7 +91,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 		alterTable := "ALTER TABLE IF EXISTS %s RENAME TO %s;"
 		_, err = db.Exec(fmt.Sprintf(alterTable, tablePathName, fmt.Sprintf("%s", renameTable)))
 		if err != nil {
-			log.Println("There was an issue changing the existing table's name: " + err.Error())
+			log.Println("\nThere was an issue changing the existing table's name: " + err.Error() + "\n")
 			return
 		}
 	}
@@ -116,7 +116,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 		row = db.QueryRow(pgClassStmt, pkRename)
 		err = row.Scan(&loop)
 		if err != nil {
-			log.Println("An error occurred checking for the primary key constraint's name:" + err.Error())
+			log.Println("\nAn error occurred checking for the primary key constraint's name:" + err.Error() + "\n")
 			return
 		}
 		if loop {
@@ -128,7 +128,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 	if pkConstraint != pkRename {
 		_, err = db.Exec(fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", pkConstraint, pkRename))
 		if err != nil {
-			log.Println("There was an issue changing the existing pk constraint's name: " + err.Error())
+			log.Println("\nThere was an issue changing the existing pk constraint's name: " + err.Error() + "\n")
 			return
 		}
 	}
@@ -141,7 +141,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 		row = db.QueryRow(pgClassStmt, seqRename)
 		err = row.Scan(&loop)
 		if err != nil {
-			log.Println("An error occurred checking for the sequences' name:" + err.Error())
+			log.Println("An error occurred checking for the sequences' name:" + err.Error() + "\n")
 			return
 		}
 		if loop {
@@ -152,7 +152,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 	if seqName != seqRename {
 		_, err = db.Exec(fmt.Sprintf("ALTER SEQUENCE %s RENAME TO %s;", seqName, seqRename))
 		if err != nil {
-			log.Println("There was an issue changing the existing sequences' name: " + err.Error())
+			log.Println("\nThere was an issue changing the existing sequences' name: " + err.Error() + "\n")
 			return
 		}
 	}
@@ -167,7 +167,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 			row = db.QueryRow(pgClassStmt, indexRename)
 			err = row.Scan(&loop)
 			if err != nil {
-				log.Println("An error occurred checking for an indexes' name:" + err.Error())
+				log.Println("\nAn error occurred checking for an indexes' name:" + err.Error() + "\n")
 				return
 			}
 			if loop {
@@ -177,7 +177,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 		if index != indexRename {
 			_, err = db.Exec(fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", index, indexRename))
 			if err != nil {
-				log.Println("There was an issue changing the existing indexes' name: " + err.Error())
+				log.Println("\nThere was an issue changing the existing indexes' name: " + err.Error() + "\n")
 				return
 			}
 		}
@@ -201,7 +201,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 	buffer.WriteString(" ) WITH (OIDS=FALSE);")
 	_, err = db.Exec(buffer.String())
 	if err != nil {
-		log.Println("Issue creating table: " + err.Error())
+		log.Println("Issue creating table: " + err.Error() + "\n")
 		return
 	}
 
@@ -210,7 +210,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 	buffer.WriteString(fmt.Sprintf("ALTER TABLE %s OWNER to %s; GRANT ALL ON TABLE %s TO %s;", tablePathName, group, tablePathName, group))
 	_, err = db.Exec(buffer.String())
 	if err != nil {
-		log.Println("Issue assigning permissions: " + err.Error())
+		log.Println("\nIssue assigning permissions: " + err.Error() + "\n")
 		return
 	}
 
@@ -231,7 +231,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 			row = db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s", oldTableName))
 			err = row.Scan(&numRows)
 			if err != nil {
-				log.Println("Issue checking table being altered" + err.Error())
+				log.Println("\nIssue checking table being altered" + err.Error() + "\n")
 				return
 			}
 			if numRows > 0 {
@@ -239,7 +239,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 				row = db.QueryRow(fmt.Sprintf("Select MAX(%s) from %s", structObj.oldColPrim, oldTableName))
 				err = row.Scan(&lastSequence)
 				if err != nil {
-					log.Println("Issue reading table's primary key :" + err.Error())
+					log.Println("\nIssue reading table's primary key :" + err.Error() + "\n")
 					return
 				}
 				lastSequence = lastSequence + 1
@@ -250,21 +250,21 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 	//Add Primary Key
 	_, err = db.Exec(fmt.Sprintf("ALTER TABLE %s ADD CONSTRAINT %s PRIMARY KEY (%s);", tablePathName, pkConstraint, primCol))
 	if err != nil {
-		log.Println("Creating the primary key constraint failed: " + err.Error())
+		log.Println("\nCreating the primary key constraint failed: " + err.Error() + "\n")
 		return
 	}
 
 	//Create and add sequence to primary key
 	_, err = db.Exec(fmt.Sprintf("CREATE SEQUENCE %s INCREMENT 1 MINVALUE 1 MAXVALUE 9223372036854775807 START %d CACHE 1; ALTER TABLE %s OWNER to %s; GRANT ALL ON TABLE %s TO %s;", seqName, lastSequence, seqName, group, seqName, group))
 	if err != nil {
-		log.Println("Creating the primary key sequence failed: " + err.Error())
+		log.Println("\nCreating the primary key sequence failed: " + err.Error() + "\n")
 		return
 	}
 
 	//Bind sequence to primary key column as its defualt value
 	_, err = db.Exec(fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT nextval('%s'::regclass);", tablePathName, primCol, seqName))
 	if err != nil {
-		log.Println("Binding the default primary key sequence failed: " + err.Error())
+		log.Println("\nBinding the default primary key sequence failed: " + err.Error() + "\n")
 		return
 	}
 
@@ -272,7 +272,7 @@ func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 	for _, stmt := range indexes {
 		_, err = db.Exec(stmt)
 		if err != nil {
-			log.Println("Creating an index failed: " + err.Error())
+			log.Println("\nCreating an index failed: " + err.Error() + "\n")
 			return
 		}
 	}

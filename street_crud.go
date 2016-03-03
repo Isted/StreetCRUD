@@ -28,7 +28,7 @@ func main() {
 
 	var filePath string
 	var isFileFound bool
-	var processFail string = "The file could not be processed. "
+	var processFail string = "\nThe file could not be processed. "
 
 	//db, err := sql.Open("postgres", "")
 	//if err == nil {
@@ -302,7 +302,7 @@ func main() {
 							var tblName string
 							if structFromFile.tableName == "" {
 								if errNaming := CheckColAndTblNames(structFromFile.structName); errNaming != nil {
-									fmt.Println(processFail + err.Error())
+									fmt.Println(processFail + err.Error() + "\n")
 									return
 								}
 								if useUnderscore {
@@ -320,7 +320,7 @@ func main() {
 								}
 							}
 							if err != nil {
-								fmt.Println(processFail + err.Error())
+								fmt.Println(processFail + err.Error() + "\n")
 								return
 							}
 
@@ -356,7 +356,7 @@ func main() {
 									var err error
 									err = CheckColAndTblNames(lineColumn[0])
 									if err != nil {
-										fmt.Println(processFail + err.Error())
+										fmt.Println(processFail + err.Error() + "\n")
 										return
 									}
 									col := new(column)
@@ -364,7 +364,7 @@ func main() {
 									if useUnderscore {
 										col.colName, err = ConvertToUnderscore(lineColumn[0])
 										if err != nil {
-											fmt.Println(processFail + err.Error())
+											fmt.Println(processFail + err.Error() + "\n")
 											return
 										}
 									} else {
@@ -460,7 +460,7 @@ func main() {
 
 									if col.nulls {
 										if err := col.MapNullTypes(); err != nil {
-											fmt.Println(processFail + err.Error())
+											fmt.Println(processFail + err.Error() + "\n")
 											return
 										}
 										//Handle meta data contained w/in ` `
@@ -510,7 +510,7 @@ func main() {
 								if useUnderscore {
 									under, err := ConvertToUnderscore(strings.TrimSpace(lineMap[1][strings.Index(lineMap[1], "]")+1:]))
 									if err != nil {
-										fmt.Println(processFail + err.Error())
+										fmt.Println(processFail + err.Error() + "\n")
 										return
 									}
 									structFromFile.newAltCols = append(structFromFile.newAltCols, under)
@@ -548,7 +548,7 @@ func main() {
 					//file is new so don't append
 					fileOpen[pathChanged[structObj.fileName]], err = os.Create(pathChanged[structObj.fileName])
 					if err != nil {
-						fmt.Println("There was a problem generating a new go file. " + err.Error())
+						fmt.Println("\nThere was a problem generating a new go file. " + err.Error() + "\n")
 						return
 					}
 
@@ -563,8 +563,8 @@ func main() {
 
 				//Check to see if user wants to generate or alter tables
 				var yesOrNo string
-				fmt.Printf("File %s generated.", structObj.fileName)
-				fmt.Printf("\nDo you want to create/alter the table %s (y or n): ", structObj.tableName)
+				fmt.Printf("\nFile %s generated.", structObj.fileName)
+				fmt.Printf("\n\nDo you want to create/alter the table %s (y or n): ", structObj.tableName)
 				_, err := fmt.Scanf("%s", &yesOrNo)
 				if err != nil {
 					fmt.Println("An error occurred, exiting Street CRUD.\n")
@@ -576,11 +576,11 @@ func main() {
 						var err error
 						db, err = sql.Open("postgres", connString)
 						if err != nil {
-							fmt.Printf("There was a problem opening the database: %s", err.Error())
+							fmt.Printf("\nThere was a problem opening the database: %s", err.Error() + "\n")
 							return
 						}
 						if err := db.Ping(); err != nil {
-							fmt.Printf("DB connection issue: %s", err.Error())
+							fmt.Printf("\nDB connection issue: %s", err.Error() + "\n")
 							return
 						}
 					}

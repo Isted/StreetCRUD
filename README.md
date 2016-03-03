@@ -34,11 +34,11 @@ $ export GOBIN=/Users/userName/go/bin
 
 Install:
 ~~~
-$ go install *.go
+$ go install github.com/isted/StreetCRUD
 ~~~
 Run:
 ~~~
-$ StreetCRUD
+$ CD to ~/go/binStreetCRUD then type ./StreetCRUD
 ~~~
 
 ##Getting Started
