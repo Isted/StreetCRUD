@@ -79,7 +79,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		buffer.WriteString(packageName)
 		buffer.WriteString("\n\n")
 		buffer.WriteString("import (\n")
-		buffer.WriteString("\"database/sql\"\n_ \"github.com/lib/pq\"\n\"encoding/json\"\n\"log\"")
+		buffer.WriteString("\"database/sql\"\n//DB Driver\n_ \"github.com/lib/pq\"\n\"encoding/json\"\n\"log\"")
 		buffer.WriteString(time)
 		if structFromFile.nullsPkg {
 			buffer.WriteString("\"github.com/markbates/going/nulls\"")
@@ -232,7 +232,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	delFilter = ""
 	if delColName != "" {
 		delFilter = ", deleted1, deleted2"
-		buffer.WriteString("deleted1 := false\ndeleted2 := false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
+		buffer.WriteString("deleted1 := false\ndeleted2 := false\nswitch delFilter {\ncase DELETED" + strings.ToUpper(structFromFile.structName) + ":\ndeleted1 = true\ndeleted2 = true\ncase ALL" + strings.ToUpper(structFromFile.structName) + ":\ndeleted2 = true\n}\n")
 	}
 	if structFromFile.prepared {
 		buffer.WriteString(fmt.Sprintf("row := %s.GetByID.QueryRow(%s%s)\n", dataLayerVar, LowerCaseFirstChar(primVarName), delFilter))
