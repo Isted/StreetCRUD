@@ -172,11 +172,12 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	insertStmt := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING %s", tablePathName, strings.Join(insertSet, ", "), strings.Join(insertVals, ", "), primColName)
 	markDelStmt := fmt.Sprintf("UPDATE %s SET %s = $1, %s = $2 WHERE %s = $3", tablePathName, delColName, delOnColName, primColName)
 	delStmt := fmt.Sprintf("DELETE from %s WHERE %s = $1", tablePathName, primColName)
+    constStmt := fmt.Sprintf("\n//Constants used to alter Get queries (for rows marked as deleted)\nconst (\nEXISTS%s = iota\nDELETED%s = iota\nALL%s = iota\n)\n", strings.ToUpper(structFromFile.structName), strings.ToUpper(structFromFile.structName), strings.ToUpper(structFromFile.structName))
 	//End Create query statements
 
 	//Write constants used to alter Get queries
 	if delColName != "" {
-		buffer.WriteString("\nconst (\nEXISTS = iota\nDELETED = iota\nALL = iota\n)\n")
+		buffer.WriteString(constStmt)
 	}
 
 	//Write struct
@@ -199,7 +200,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	delFilter = ""
 	if delColName != "" {
 		delFilter = ", deleted1, deleted2"
-		buffer.WriteString("deleted1 := false\ndeleted2 := false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
+		buffer.WriteString("deleted1 := false\ndeleted2 := false\nswitch delFilter {\ncase DELETED" + strings.ToUpper(structFromFile.structName) + ":\ndeleted1 = true\ndeleted2 = true\ncase ALL" + strings.ToUpper(structFromFile.structName) + ":\ndeleted2 = true\n}\n")
 	}
 	if structFromFile.prepared {
 		buffer.WriteString(fmt.Sprintf("row := %s.GetByID.QueryRow(%s%s)\n", dataLayerVar, LowerCaseFirstChar(primVarName), delFilter))
@@ -294,7 +295,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		delFilter = ""
 		if delColName != "" {
 			delFilter = ", deleted1, deleted2"
-			buffer.WriteString("deleted1 := false\ndeleted2 := false\nswitch delFilter {\ncase DELETED:\ndeleted1 = true\ndeleted2 = true\ncase ALL:\ndeleted2 = true\n}\n")
+			buffer.WriteString("deleted1 := false\ndeleted2 := false\nswitch delFilter {\ncase DELETED" + strings.ToUpper(structFromFile.structName) + ":\ndeleted1 = true\ndeleted2 = true\ncase ALL" + strings.ToUpper(structFromFile.structName) + ":\ndeleted2 = true\n}\n")
 		}
 		if structFromFile.prepared {
 			buffer.WriteString(fmt.Sprintf("rows, err := %s.%s.Query(%s%s)\n", dataLayerVar, method[4], method[2], delFilter))
