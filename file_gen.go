@@ -71,7 +71,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		//discover if the time package needs to be included
 		time := "\n"
 		for _, col := range structFromFile.cols {
-			if col.deletedOn && !col.nulls {
+			if (col.deletedOn && !col.nulls) || col.goType == "time.Time" {
 				time = "\n\"time\"\n"
 			}
 		}

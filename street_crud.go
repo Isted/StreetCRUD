@@ -48,7 +48,7 @@ func main() {
 	fmt.Println(" |  \\  /\\  |\\ | | |__  |       | /__`  |  |__  |  \\ ")
 	fmt.Println(" |__/ /~~\\ | \\| | |___ |___    | .__/  |  |___ |__/ ")
 	fmt.Println("")
-	fmt.Println("////////////////////////////////////////////////////")
+	fmt.Println("/////////////////////Ver. 1.0///////////////////////")
 	fmt.Println("")
 	fmt.Printf("Please see github.com/isted/StreetCRUD for instructions.\n")
 	fmt.Printf("Press return at any time to quit.\n")
