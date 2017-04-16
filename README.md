@@ -4,7 +4,7 @@
 * A three minute [overview](http://youtu.be/R_FQdpizIDQ "StreetCRUD Demo") that demonstrates StreetCRUD.
 * A longer, more detailed [video](http://youtu.be/t3CCy1zSGNw "StreetCRUD Tutorial").
 
-####Introduction
+#### Introduction
 
 StreetCRUD is a code and table generation command-line utility for people who aren't fans of ORMs, but appreciate a kick start creating struct methods, tables, and queries for CRUD functionality. You only have to supply your structs, database connection info, and a few keywords in a text file that StreetCRUD will process. Tables, queries, and struct methods will be created or altered automatically. This allows the programmer to add methods and queries at a later date without having to wrestle with an ORM. You keep all the power, but don't have to start at level one. At this time, StreetCRUD supports PostgreSQL, JSON, and Go.
 
@@ -41,7 +41,7 @@ Run:
 $ CD to ~/go/binStreetCRUD then type ./StreetCRUD
 ~~~
 
-##Getting Started
+## Getting Started
 
 The user will need to create a text file that defines information about his or her database connection, structs (data models), and keywords. This file will be processed by StreetCRUD and used for generating go code, SQL queries, tables, and columns. Below is an example file that would add two new structs/tables and alter a third struct/table. Inconsistent spacing and capitalization are used on purpose to demonstrate that they aren't an issue for file processing. Keywords are defined below the example file.
 
@@ -103,7 +103,7 @@ type UserNew struct {
 }
 ~~~
 
-####Keywords and Definitions:
+#### Keywords and Definitions:
 
 The Following keywords need to appear at the top of the user created text file before structs are defined (one key-value pair per line). A value needs to be typed next to the keyword. For instance, [Server] localhost indicates that the name of the database server is localhost. The keywords defined below will let StreetCRUD connect and make changes to your database server. Some of the other key-values pairs will indicate package and table naming options. Keywords and their values are not case sensitive, also spaces after the "]" symbol are ignored. StreetCRUD includes an example struct files for you to test out and process. You will need to create the database, database user, and enter all relevant server information at the top of the example struct files so that they can be processed properly.
 
@@ -119,12 +119,12 @@ The Following keywords need to appear at the top of the user created text file b
 
 The next areas of the text file consist of structs used for code and table generation. The structs are in Go syntax with a few modifications to allow StreetCRUD to generate the proper tables and functions. four keywords appear above the struct to indicate action, table name, file name, and to use prepared SQL statements. Table name and file name can be left blank, causing default names to be used based on the struct name. Additional keywords are used at the end of each line of a struct variable. They indicate what type of column should be created in the database (e.g. [primary] to signal that that column is the primary key). Some of these keywords also cause additional methods to be generated.
 
-####Keywords Above a Struct for Generating New Code/Table
+#### Keywords Above a Struct for Generating New Code/Table
 - **[add struct]**: Indicates that a new struct needs to be processed and added to the database. No text is required next to [add struct].
 - **[table]**: A table name can be added next to this or it can be left blank to allow for default naming (e.g., tbl_structName). Table names will be converted to lower case and named using underscores if [Underscore] is set to true. For example, "[table] tblName" will create a new table named tblname or tbl_name depending on the [Underscore setting. If there is only empty space after "[table]" and the name of the defined struct is User, the table name will be tbl_user or tbluser.
 - **[file name]**: A file name such as user.go can be added to the right of [file name] which will cause the code-generation file to be named user.go. If no name is given, default naming based on struct name will be used. If multiple struct definitions use the same value for [file name], code will be generated to the same file and not generated in separate files.
 
-####Keywords Above a Struct for Dealing With an Altered Table/Struct
+#### Keywords Above a Struct for Dealing With an Altered Table/Struct
 
 - **[alter table]**: The name of the table to be altered should appear after the keyword (e.g., [alter table] old_table). This command should be used after changes occur to a previously generated struct. These can include the deletion of a struct variable (dropping a column), altering the order of columns (new struct variable order will mirror new column order), or adding a new struct variable (new column). [alter table] will trigger StreetCRUD to generate new code and a new table. Data will be copied from a previously generated table to the new table. The new table will mirror the new struct, and the data to be copied to the new table will be defined by the user in a series of lines mapping the old column name to the new struct variable name. The order of keywords and struct definition required to follow an [alter table] command can be seen in the example file above, and below they are defined.
 - **[copy cols]**: Must appear on the line following [alter table] and before the lines that define how columns are copied from the old table to the new table. This keyword is only used to help improve readability of the user created text file. The mapping of the old column names to the newly defined struct variables should follow this line.
@@ -134,7 +134,7 @@ The next areas of the text file consist of structs used for code and table gener
 - **[file name]**: Same as above previously defined.
 - **[prepared]**: Can be set to true or false. If set to true, then generated code will have prepared sql statements. If false, generated code will have string value sql statements.
 
-####Struct Keywords
+#### Struct Keywords
 The following keywords can be added to the end of a line that defines a struct variable. There can be 0 to many keywords at the end of each line. These will alter how columns are defined and what methods should be created. Below is an example taken out of a struct definition
 ~~~
 Title string `json:”title"` [index][patch][size:255]
@@ -148,7 +148,7 @@ The three keywords are [index], [patch], and [size:255] all of which are optiona
 - **[deleted] and [deletedOn]**: When [deleted] is used, the variable type must be bool. When [deletedOn] is used, the variable type must be time.Time. [deleted] and [deletedOn] can only appear on a single variable in a struct, and they can't be on the same variable. Also, the keywords must appear as a pair. A method will be created that sets the [deleted] column to true and sets the [deletedOn] column to the current date and time.
 - **[nulls]**: When used, the column will be set to allow null values. The generated variable will use the "github.com/markbates/going/nulls" package null types because they automatically marshal to and from JSON properly. Supported types are string, int64, float64, bool, []byte, float32, int, int32, uint32, and time.Time. Make sure to run the "go get github.com/markbates/going/nulls" command if this keyword is used. Columns marked as both [deleted] and [nulls] will just be marked as [deleted].
 
-##Table and File Creation Handling
+## Table and File Creation Handling
 The generated code file(s) will not be formatted, but thanks to goFMT, the code will be perfectly formatted after a save in your text editor of choice is performed.
 
 If a file exists with the same name as a newly generated file, the old file will not be renamed. The generated file will have an incremented number appended.
@@ -157,10 +157,10 @@ Along the same lines, if an [alter table] command is performed, the newly genera
 
 If a new table is added and there already exists a table with the same name, the old table will be renamed with an incremented number appended. Tables that are altered will not result in the old table being dropped, but, as stated, they will be renamed. Data will be copied from the old table to the new table according to the column mapping provided by the user if an [alter table] command was executed.
 
-##Gotchas
+## Gotchas
 - At this time, the only type of primary key possible is an auto-incrementing variable of some type of integer.
 - Support for nested objects has not yet been added. If your struct has a struct for a variable, use the keyword [ignore] after the variable/column for it to be ignored.
 - Fully qualified names for anything database related should not be used. StreetCRUD combines partial elements such as database name, schema, etc., for you.
 - StreetCRUD does not make sure that struct variables and columns are unique. Entering identical names in the file to be processed will cause an error. This issue will be addressed in the future.
 
-###Licensed Under the MIT License (see included LICENSE.md file)
+### Licensed Under the MIT License (see included LICENSE.md file)
