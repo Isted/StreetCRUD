@@ -1,4 +1,4 @@
-Copyright (c) 2014 Daniel Isted
+Copyright (c) 2014-2025 Daniel Isted
 
 The MIT License (MIT)
 
