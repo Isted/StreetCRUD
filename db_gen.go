@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-//BuildConnString builds the connection string from file
+// BuildConnString builds the connection string from file
 func BuildConnString(dbUser string, password string, dbName string, server string, useSSL bool) string {
 
 	var buffer bytes.Buffer
@@ -27,13 +27,14 @@ func BuildConnString(dbUser string, password string, dbName string, server strin
 	if !useSSL {
 		buffer.WriteString("disable")
 	} else {
-		buffer.WriteString("enable")
+		// lib/pq expects "require" to enable SSL
+		buffer.WriteString("require")
 	}
 
 	return buffer.String()
 }
 
-//CreateOrAlterTables creates and alters tables based on the struct definition file
+// CreateOrAlterTables creates and alters tables based on the struct definition file
 func CreateOrAlterTables(structObj *structToCreate, db *sql.DB, group string) {
 	var tablePathName string = fmt.Sprintf("%s.%s.%s", AddQuotesIfAnyUpperCase(structObj.database), AddQuotesIfAnyUpperCase(structObj.schema), structObj.tableName)
 	var oldTableName string
