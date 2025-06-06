@@ -8,32 +8,38 @@ import (
 )
 
 func ConvertToUnderscore(camel string) (string, error) {
-	var prevRune rune
-	var underscore []rune
-	for index, runeChar := range camel {
-		if index == 0 {
-			if !unicode.IsLetter(runeChar) {
-				return "", fmt.Errorf("Table and column names can't start with a character other than a letter.")
-			}
-			underscore = append(underscore, unicode.ToLower(runeChar))
-			prevRune = runeChar
-		} else {
-			if runeChar == '_' || unicode.IsLetter(runeChar) || unicode.IsDigit(runeChar) {
-				//Look for Upper case letters, append _ and make character lower case
-				if unicode.IsUpper(runeChar) {
-					if !unicode.IsUpper(prevRune) {
-						underscore = append(underscore, '_')
-					}
-					underscore = append(underscore, unicode.ToLower(runeChar))
-				} else {
-					underscore = append(underscore, runeChar)
-				}
-			} else {
-				return "", fmt.Errorf("Table and column names can't contain non-alphanumeric characters.")
-			}
-		}
-		prevRune = runeChar
+	if camel == "" {
+		return "", nil
 	}
+
+	runes := []rune(camel)
+	if !unicode.IsLetter(runes[0]) {
+		return "", fmt.Errorf("Table and column names can't start with a character other than a letter.")
+	}
+
+	var underscore []rune
+	underscore = append(underscore, unicode.ToLower(runes[0]))
+
+	for i := 1; i < len(runes); i++ {
+		r := runes[i]
+
+		if !(r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)) {
+			return "", fmt.Errorf("Table and column names can't contain non-alphanumeric characters.")
+		}
+
+		prev := runes[i-1]
+
+		if unicode.IsUpper(r) {
+			nextIsLower := i+1 < len(runes) && unicode.IsLower(runes[i+1])
+			if prev != '_' && (unicode.IsLower(prev) || (unicode.IsUpper(prev) && nextIsLower)) {
+				underscore = append(underscore, '_')
+			}
+			underscore = append(underscore, unicode.ToLower(r))
+		} else {
+			underscore = append(underscore, r)
+		}
+	}
+
 	return string(underscore), nil
 }
 

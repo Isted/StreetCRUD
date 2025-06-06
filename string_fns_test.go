@@ -10,6 +10,7 @@ func TestConvertToUnderscore(t *testing.T) {
 		{"CamelCaseID", "camel_case_id"},
 		{"Simple", "simple"},
 		{"HTTPServer", "http_server"},
+		{"Camel_Case", "camel_case"},
 	}
 	for _, tt := range tests {
 		got, err := ConvertToUnderscore(tt.in)
