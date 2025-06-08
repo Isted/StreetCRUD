@@ -39,15 +39,16 @@ type column struct {
 }
 
 func (struc *structToCreate) CheckStructForDeletes() bool {
-	var isDel, isDelOn bool
+	var delCnt, delOnCnt int
 	for _, col := range struc.cols {
 		if col.deleted {
-			isDel = true
-		} else if col.deletedOn {
-			isDelOn = true
+			delCnt++
+		}
+		if col.deletedOn {
+			delOnCnt++
 		}
 	}
-	if (!isDel && isDelOn) || (isDel && !isDelOn) {
+	if delCnt != delOnCnt || delCnt > 1 || delOnCnt > 1 {
 		return false
 	}
 	return true
