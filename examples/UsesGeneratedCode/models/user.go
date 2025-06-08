@@ -18,12 +18,12 @@ const (
 )
 
 type User struct {
-	LoginID     int              `json:"loginid"`
-	Name        string           `json:"name, omitempty"`
-	Email       nulls.String `json:"email”`
-	Password    string           `json:"password" out:"false"`
-	DeletedUser bool             `json:”deleted”`
-	DelOn       nulls.Time   `json:”deletedon”`
+        LoginID     int          `json:"loginid"`
+        Name        string       `json:"name,omitempty"`
+        Email       nulls.String `json:"email"`
+        Password    string       `json:"password" out:"false"`
+        DeletedUser bool         `json:"deleted"`
+        DelOn       nulls.Time   `json:"deletedon"`
 }
 
 //Initialize and fill a User object from the DB

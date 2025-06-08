@@ -20,7 +20,7 @@ email [to] Email
 [prepared] false
 type UserA struct {
 	LogID int `json:"loginid"`	 	[primary]
-	UserName string `json:”userName”` [index][patch][size:255]
-	Phone string `json:”phone”` [nulls]
-	Email string `json:”email”` [nulls]
+	UserName string `json:"userName"` [index][patch][size:255]
+	Phone string `json:"phone"` [nulls]
+	Email string `json:"email"` [nulls]
 }
