@@ -102,7 +102,7 @@ func main() {
 	user3.Delete()
 	fmt.Printf("%s (LoginID: %d) was permanently deleted.\n", user3.Name, user3.LoginID)
 
-	//Patch Email
+        //Patch Name
 	fmt.Printf("%s's name has been changed to ", user4.Name)
 	user4.PatchName("Shallan")
 	fmt.Printf("%s.\n", user4.Name)
