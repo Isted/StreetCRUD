@@ -51,7 +51,7 @@ func GetSafePathForSave(filePath string) string {
 	}
 }
 
-func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, packageName string, conn string) string {
+func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, packageName string) string {
 
 	var buffer bytes.Buffer
 	var primColName string
@@ -172,7 +172,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 	insertStmt := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING %s", tablePathName, strings.Join(insertSet, ", "), strings.Join(insertVals, ", "), primColName)
 	markDelStmt := fmt.Sprintf("UPDATE %s SET %s = $1, %s = $2 WHERE %s = $3", tablePathName, delColName, delOnColName, primColName)
 	delStmt := fmt.Sprintf("DELETE from %s WHERE %s = $1", tablePathName, primColName)
-    constStmt := fmt.Sprintf("\n//Constants used to alter Get queries (for rows marked as deleted)\nconst (\nEXISTS%s = iota\nDELETED%s = iota\nALL%s = iota\n)\n", strings.ToUpper(structFromFile.structName), strings.ToUpper(structFromFile.structName), strings.ToUpper(structFromFile.structName))
+	constStmt := fmt.Sprintf("\n//Constants used to alter Get queries (for rows marked as deleted)\nconst (\nEXISTS%s = iota\nDELETED%s = iota\nALL%s = iota\n)\n", strings.ToUpper(structFromFile.structName), strings.ToUpper(structFromFile.structName), strings.ToUpper(structFromFile.structName))
 	//End Create query statements
 
 	//Write constants used to alter Get queries
@@ -262,7 +262,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 
 	//Write MarkDeleted() if needed
 	if delColName != "" {
-		buffer.WriteString(fmt.Sprintf("//Mark a row as deleted and at time.Time\nfunc (%s *%s) MarkDeleted(del ", structObject, structFromFile.structName))
+		buffer.WriteString(fmt.Sprintf("//Mark a row as deleted at a specific time\nfunc (%s *%s) MarkDeleted(del ", structObject, structFromFile.structName))
 		buffer.WriteString(fmt.Sprintf("%s, when %s) error {\n", delColType, delOnColType))
 		if structFromFile.prepared {
 			buffer.WriteString(fmt.Sprintf("_, err := %s.MarkDel.Exec(del, when, %s.%s)\n", dataLayerVar, structObject, primVarName))
@@ -337,7 +337,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 		}
 		buffer.WriteString("Init bool\n}\n")
 
-		//Write InitDataLayer f() and prepared sql statments
+		//Write InitDataLayer f() and prepared SQL statements
 		buffer.WriteString(fmt.Sprintf("\n//Init%sDataLayer prepares SQL statements and assigns the passed in DB pointer\nfunc Init%sDataLayer(db *sql.DB) error {\nvar err error\nif !%s.Init {\n", structFromFile.structName, structFromFile.structName, dataLayerVar))
 		buffer.WriteString(fmt.Sprintf("%s.GetByID, err = db.Prepare(\"%s\")\n", dataLayerVar, selectStmt))
 		buffer.WriteString(fmt.Sprintf("%s.Update, err = db.Prepare(\"%s\")\n", dataLayerVar, updateStmt))
@@ -346,7 +346,7 @@ func BuildStringForFileWrite(structFromFile *structToCreate, isNew bool, package
 			buffer.WriteString(fmt.Sprintf("%s.MarkDel, err = db.Prepare(\"%s\")\n", dataLayerVar, markDelStmt))
 		}
 		buffer.WriteString(fmt.Sprintf("%s.Delete, err = db.Prepare(\"%s\")\n", dataLayerVar, delStmt))
-		//Write patch and index methods if the exist
+		//Write patch and index methods if they exist
 		for _, method := range indexMethods {
 			buffer.WriteString(fmt.Sprintf("%s.%s, err = db.Prepare(\"%s\")\n", dataLayerVar, method[4], method[1]))
 		}
