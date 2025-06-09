@@ -38,7 +38,7 @@ $ go install github.com/isted/StreetCRUD
 ~~~
 Run:
 ~~~
-$ CD to ~/go/binStreetCRUD then type ./StreetCRUD
+$ cd ~/go/bin/StreetCRUD && ./StreetCRUD
 ~~~
 
 ## Getting Started

@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 )
 
-//The start of the main program
+// The start of the main program
 func main() {
 	const reqBaseVarsC = 9
 	var server string
@@ -302,7 +302,7 @@ func main() {
 							var tblName string
 							if structFromFile.tableName == "" {
 								if errNaming := CheckColAndTblNames(structFromFile.structName); errNaming != nil {
-									fmt.Println(processFail + err.Error() + "\n")
+									fmt.Println(processFail + errNaming.Error() + "\n")
 									return
 								}
 								if useUnderscore {
@@ -553,10 +553,10 @@ func main() {
 					}
 
 					//BuildStringForFileWrite(structObj, true, packageName)
-					fileOpen[pathChanged[structObj.fileName]].WriteString(BuildStringForFileWrite(structObj, true, packageName, connString))
+					fileOpen[pathChanged[structObj.fileName]].WriteString(BuildStringForFileWrite(structObj, true, packageName))
 				} else {
 					//file exists so append
-					fileOpen[pathChanged[structObj.fileName]].WriteString(BuildStringForFileWrite(structObj, false, packageName, connString))
+					fileOpen[pathChanged[structObj.fileName]].WriteString(BuildStringForFileWrite(structObj, false, packageName))
 
 				}
 				fileOpen[pathChanged[structObj.fileName]].Sync()
@@ -576,11 +576,11 @@ func main() {
 						var err error
 						db, err = sql.Open("postgres", connString)
 						if err != nil {
-							fmt.Printf("\nThere was a problem opening the database: %s", err.Error() + "\n")
+							fmt.Printf("\nThere was a problem opening the database: %s", err.Error()+"\n")
 							return
 						}
 						if err := db.Ping(); err != nil {
-							fmt.Printf("\nDB connection issue: %s", err.Error() + "\n")
+							fmt.Printf("\nDB connection issue: %s", err.Error()+"\n")
 							return
 						}
 					}
